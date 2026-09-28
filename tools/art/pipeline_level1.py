@@ -5,7 +5,8 @@
 Uses the same models as pipeline.py (downloaded on first run), then:
 4x upscale -> remove the live pieces from the backdrop (LaMa) -> cut sprites and HUD pieces ->
 build the tall gameplay background -> generate the jelly-block textures -> cut the Level Complete
-card from panel 10 of the reference, and copies the results into game/public/assets/level1/.
+card from panel 10 of the reference -> cut the later stages' pieces (cloud monster, rings,
+islands, stage icons) from the other panels, and copies the results into game/public/assets/level1/.
 """
 import os
 import shutil
@@ -49,6 +50,7 @@ def main(work):
          os.path.join(out, "bg_level1.webp"), "1.25"])
     run([sys.executable, os.path.join(HERE, "build_level1_blocks.py"), out])
     run([sys.executable, os.path.join(HERE, "build_level1_complete.py"), os.path.join(work, "p10_x4.png"), models, out])
+    run([sys.executable, os.path.join(HERE, "build_level1_extras.py"), x4, os.path.join(l1, "direction_x4.png"), models, out])
 
     os.makedirs(OUT, exist_ok=True)
     for f in os.listdir(out):

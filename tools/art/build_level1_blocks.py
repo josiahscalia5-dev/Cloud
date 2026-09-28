@@ -7,6 +7,8 @@ the faces are generated here in the same style (colours sampled from the painted
 glossy top with a bright rim, an inset panel and the colour's white symbol; a deeper front and
 side with an inner panel line, sparkles and glowing light drips that fade out below the block.
 Each colour has its own symbol so the colours can be told apart without relying on hue.
+The later stages add dark stone blocks (with a cracked fake twin), gold and ice path blocks
+with an arrow, and rainbow road tiles; flipping blocks also get a bottom face.
 
 Texture scale is 640 px per world unit; a block is 0.8 wide, 0.62 deep and 0.26 tall, and the
 front/side textures carry another 0.21 of glow below the block (see js/level1.js).
@@ -34,6 +36,15 @@ COLOURS = {
     "pink": ((255, 92, 212), (226, 30, 162)),
 }
 SYMBOL = {"red": "flower", "yellow": "circle", "blue": "triangle", "green": "club", "purple": "star", "pink": "heart"}
+# later stages: name -> (top, front, symbol, rim colour, symbol colour, cracked)
+STYLES = {
+    "stone": ((74, 40, 112), (46, 20, 74), "star", (255, 196, 112), (255, 150, 232), False),
+    "stonefake": ((74, 40, 112), (46, 20, 74), "star", (255, 196, 112), (255, 150, 232), True),
+    "gold": ((255, 198, 52), (236, 128, 18), "arrow", (255, 255, 255), (255, 253, 245), False),
+    "goldfake": ((255, 198, 52), (236, 128, 18), "arrow", (255, 255, 255), (255, 253, 245), True),
+    "ice": ((112, 200, 255), (38, 118, 236), "arrow", (255, 255, 255), (255, 253, 245), False),
+}
+RAINBOW = [(255, 64, 88), (255, 150, 40), (255, 222, 40), (70, 220, 90), (40, 160, 255), (170, 90, 255)]
 
 
 def rrect_sdf(w, h, x0, y0, x1, y1, r):
@@ -92,6 +103,9 @@ def symbol_mask(kind, w, h, size):
             rr = s * (1.08 if i % 2 == 0 else 0.46)
             pts.append((cx + rr * np.cos(a), cy + 0.08 * s + rr * np.sin(a)))
         d.polygon(pts, 255)
+    elif kind == "arrow":
+        d.polygon([(cx, cy - s), (cx + s * 0.85, cy - s * 0.05), (cx + s * 0.34, cy - s * 0.05), (cx + s * 0.34, cy + s),
+                   (cx - s * 0.34, cy + s), (cx - s * 0.34, cy - s * 0.05), (cx - s * 0.85, cy - s * 0.05)], 255)
     elif kind == "heart":
         r = s * 0.5
         d.ellipse([cx - s, cy - s * 0.75, cx, cy - s * 0.75 + 2 * r], 255)
@@ -110,44 +124,67 @@ def sparkle(img, x, y, r, a=1.0):
     return mix(img, (255, 255, 255), g * a)
 
 
-def top_texture(name, top, seed):
+def top_texture(name, top, seed, sym=None, rim_c=(255, 255, 255), sym_c=(255, 253, 245), cracks=False, stripes=False):
     top = np.array(top, np.float32)
-    lite = mix(top, (255, 255, 255), 0.32)
+    rim_c = np.array(rim_c, np.float32)
+    lite = mix(top, (255, 255, 255), 0.32) if not stripes else None
     d = rrect_sdf(TW, TH, 2, 2, TW - 2, TH - 2, 46)
     yy = np.mgrid[0:TH, 0:TW][0].astype(np.float32) / TH
     img = np.zeros((TH, TW, 3), np.float32) + top
+    if stripes:                                                            # rainbow road: bands along the path
+        xx = np.mgrid[0:TH, 0:TW][1].astype(np.float32) / TW * len(RAINBOW)
+        idx = np.clip(xx.astype(int), 0, len(RAINBOW) - 1)
+        img = np.array(RAINBOW, np.float32)[idx]
+        f = xx - np.floor(xx)
+        img = mix(img, (255, 255, 255), np.clip(1 - np.minimum(f, 1 - f) / 0.06, 0, 1) * 0.45)
     img = mix(img, (255, 255, 255), (0.16 * (1 - yy)))                     # far edge catches more sky
     img = img * (1 + 0.07 * noise(TH, TW, 16, seed)[..., None])            # jelly mottling
     rim = np.clip(1 - (-d) / 30, 0, 1)                                     # lighter bevel along the edge
-    img = mix(img, lite, rim ** 1.5 * 0.9)
+    img = mix(img, mix(img, (255, 255, 255), 0.32) if stripes else lite, rim ** 1.5 * 0.9)
     inner = rrect_sdf(TW, TH, 44, 40, TW - 44, TH - 40, 30)
-    img = mix(img, mix(top, (255, 255, 255), 0.14), np.clip(-inner / 6, 0, 1) * 0.55)  # inset panel
+    if not stripes:
+        img = mix(img, mix(top, (255, 255, 255), 0.14), np.clip(-inner / 6, 0, 1) * 0.55)  # inset panel
     img = mix(img, top * 0.82, line(inner, 3, 3, 2) * 0.5)                 # panel edge shadow
     img = mix(img, (255, 255, 255), line(inner, -1, 2.2, 1.2) * 0.7)       # panel edge highlight
-    img = mix(img, (255, 255, 255), blur(line(d, -9, 4, 1.5), 3) * 0.8)   # glowing rim line
-    img = mix(img, (255, 255, 255), line(d, -9, 3, 1.2) * 0.95)
+    img = mix(img, rim_c, blur(line(d, -9, 4, 1.5), 3) * 0.8)             # glowing rim line
+    img = mix(img, rim_c, line(d, -9, 3, 1.2) * 0.95)
     # soft diagonal gloss
     yx = np.mgrid[0:TH, 0:TW].astype(np.float32)
     band = np.exp(-(((yx[1] / TW) * 0.8 + (yx[0] / TH) - 0.55) / 0.12) ** 2) * 0.13
     img = mix(img, (255, 255, 255), band * np.clip(-d / 20, 0, 1))
     # symbol with a soft glow
-    sm = symbol_mask(SYMBOL[name], TW, TH, 150)
-    img = mix(img, (255, 255, 255), blur(sm, 7) * 0.35)
-    img = mix(img, mix(top, (255, 255, 255), 0.5), blur(sm, 1.5) * 0.6)
-    img = mix(img, (255, 253, 245), sm)
+    if sym:
+        sm = symbol_mask(sym, TW, TH, 150)
+        img = mix(img, sym_c, blur(sm, 7) * 0.35)
+        img = mix(img, mix(top, sym_c, 0.5), blur(sm, 1.5) * 0.6)
+        img = mix(img, sym_c, sm)
+    if cracks:                                                             # the fake twin: hairline cracks
+        cm = Image.new("L", (TW, TH), 0)
+        cd = ImageDraw.Draw(cm)
+        rng = np.random.default_rng(99)
+        for x0, y0 in [(90, 60), (380, 90), (140, 300), (420, 320), (260, 200)]:
+            pts = [(x0, y0)]
+            for _ in range(5):
+                pts.append((pts[-1][0] + rng.uniform(-40, 40), pts[-1][1] + rng.uniform(-36, 36)))
+            cd.line(pts, fill=255, width=4)
+        c = blur(np.asarray(cm).astype(np.float32) / 255, 1.2)
+        img = mix(img, (255, 225, 255), c * 0.85)
     for x, y, r in [(30, 26, 16), (TW - 60, 22, 11), (TW - 24, TH - 40, 13)]:
         img = sparkle(img, x, y, r, 0.9)
     a = np.clip(0.5 - d, 0, 1)
     return np.dstack([np.clip(img, 0, 255), a * 255]).astype(np.uint8)
 
 
-def front_texture(front, w, seed, dark=1.0):
+def front_texture(front, w, seed, dark=1.0, stripes=False):
     front = np.array(front, np.float32) * dark
     h = FH
     d = rrect_sdf(w, h, 1, -30, w - 1, FACE, 26)                           # square top (the box edge), round bottom
     y = np.mgrid[0:h, 0:w][0].astype(np.float32)
     t = np.clip(y / FACE, 0, 1)
     img = np.zeros((h, w, 3), np.float32) + front
+    if stripes:
+        xx = np.mgrid[0:h, 0:w][1].astype(np.float32) / w * len(RAINBOW)
+        img = np.array(RAINBOW, np.float32)[np.clip(xx.astype(int), 0, len(RAINBOW) - 1)] * 0.85 * dark
     img = mix(img, mix(front, (255, 255, 255), 0.22), np.clip(1 - t * 3, 0, 1) * 0.8)   # lit under the top edge
     img = mix(img, mix(front, (255, 255, 255), 0.35), np.clip((t - 0.7) / 0.3, 0, 1) * 0.55)  # light through the jelly
     img = img * (1 + 0.08 * noise(h, w, 10, seed + 7)[..., None])
@@ -188,12 +225,32 @@ def glow_texture():
     return np.dstack([rgb, np.clip(a, 0, 1) * 255]).astype(np.uint8)
 
 
+def bottom_texture(front):
+    """Underside, seen while a block flips."""
+    d = rrect_sdf(TW, TH, 2, 2, TW - 2, TH - 2, 46)
+    img = np.zeros((TH, TW, 3), np.float32) + np.array(front, np.float32) * 0.62
+    img = mix(img, (255, 255, 255), line(d, -8, 3, 1.5) * 0.5)
+    return np.dstack([img, np.clip(0.5 - d, 0, 1) * 255]).astype(np.uint8)
+
+
+def save(img, out, name):
+    Image.fromarray(img).save(os.path.join(out, name + ".webp"), quality=90, method=6)
+
+
 def main(out):
     os.makedirs(out, exist_ok=True)
     for i, (name, (top, front)) in enumerate(COLOURS.items()):
-        Image.fromarray(top_texture(name, top, i)).save(os.path.join(out, f"top_{name}.webp"), quality=90, method=6)
-        Image.fromarray(front_texture(front, FW, i)).save(os.path.join(out, f"front_{name}.webp"), quality=90, method=6)
-        Image.fromarray(front_texture(front, SW, i + 20, 0.78)).save(os.path.join(out, f"side_{name}.webp"), quality=90, method=6)
+        save(top_texture(name, top, i, SYMBOL[name]), out, f"top_{name}")
+        save(front_texture(front, FW, i), out, f"front_{name}")
+        save(front_texture(front, SW, i + 20, 0.78), out, f"side_{name}")
+        save(bottom_texture(front), out, f"bottom_{name}")
+    for i, (name, (top, front, sym, rim, sym_c, cracks)) in enumerate(STYLES.items()):
+        save(top_texture(name, top, 10 + i, sym, rim, sym_c, cracks), out, f"top_{name}")
+        save(front_texture(front, FW, 10 + i), out, f"front_{name}")
+        save(front_texture(front, SW, 30 + i, 0.78), out, f"side_{name}")
+    save(top_texture("rainbow", (255, 255, 255), 40, stripes=True), out, "top_rainbow")
+    save(front_texture((200, 120, 255), FW, 41, stripes=True), out, "front_rainbow")
+    save(front_texture((200, 120, 255), SW, 42, 0.78, stripes=True), out, "side_rainbow")
     Image.fromarray(glow_texture()).save(os.path.join(out, "top_glow.webp"), quality=90, method=6)
     print("block textures written to", out)
 

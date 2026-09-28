@@ -28,8 +28,7 @@ ISLANDS = [
     ("ref", (741, 13, 848, 135), 0.25),       # panel 3, castle island
     ("ref", (944, 603, 1025, 701), 0.25),     # panel 9, left
     ("ref", (637, 578, 722, 678), 0.25),      # panel 8, left
-    ("ref", (1153, 598, 1232, 706), 0.25),    # panel 9, right
-    ("dir", (205, 330, 425, 520), 0.25),      # direction image, castle island
+    ("dir", (200, 280, 430, 520), 0.25),      # direction image, castle island
     ("dir", (452, 248, 590, 392), 0.25),      # direction image, small castle
 ]
 ICONS = {  # round (or triangular) badges from the stage banners
