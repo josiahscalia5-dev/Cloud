@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0c4ecd">
+<title>Rainbow Cascades - Level 1</title>
+<link rel="preload" href="assets/level1/bg_level1.webp" as="image">
+<link rel="stylesheet" href="css/level1.css">
+</head>
+<body>
+<div id="screen" aria-label="Level 1: Follow the Color Sequence">
+  <div id="bgWide" aria-hidden="true"></div>
+  <img id="bg" src="assets/level1/bg_level1.webp" alt="" draggable="false">
+
+  <!-- 3D play field: jelly blocks, pickups, the boy and the Rainbow Gate (built by js/level1.js) -->
+  <div id="scene"><div id="world"></div></div>
+  <img id="fgBush" class="el" src="assets/level1/fg_bush.webp" alt="" draggable="false">
+  <div id="fx" aria-hidden="true"></div>
+
+  <!-- Top bar (live values) -->
+  <div id="lvlBand" class="el" aria-hidden="true"></div>
+  <img id="avatar" class="el" src="assets/level1/hud_avatar.webp" alt="" draggable="false">
+  <div id="lvlText" class="el">Lvl <span id="lvl">16</span></div>
+  <div id="xp" class="el" role="progressbar" aria-label="Experience"><div id="xpFill"></div><div id="xpGloss"></div></div>
+  <div id="pillTime" class="el pill"><span id="time" class="num" role="timer">00:00</span></div>
+  <div id="pillCoins" class="el pill"><span id="coins" class="num">0</span></div>
+  <div id="pillGems" class="el pill"><span id="gems" class="num">0</span></div>
+  <img id="iconTime" class="el" src="assets/level1/hud_stopwatch.webp" alt="Time" draggable="false">
+  <img id="iconCoin" class="el" src="assets/level1/hud_coin.webp" alt="Coins" draggable="false">
+  <img id="iconGem" class="el" src="assets/level1/hud_gem.webp" alt="Gems" draggable="false">
+  <button id="btnPause" class="el btn" aria-label="Pause"><img src="assets/level1/hud_pause.webp" alt="" draggable="false"></button>
+
+  <!-- Colour sequence -->
+  <div id="seq" class="el panel">
+    <div id="seqTitle">Follow the Color Sequence!</div>
+    <div id="seqOrbs"></div>
+    <div id="seqCount"><span id="step">1</span>/<span id="steps">7</span></div>
+  </div>
+
+  <div id="banner" class="el panel" role="status" aria-live="polite"><span id="bannerText">Jump on the matching colors in order!</span></div>
+
+  <div id="flash" aria-hidden="true"></div>
+
+  <!-- Pause -->
+  <div id="pause" class="overlay" hidden>
+    <div class="menu panel">
+      <div class="menuTitle">Paused</div>
+      <button class="mbtn" data-cmd="resume">Resume</button>
+      <button class="mbtn" data-cmd="restart">Restart</button>
+      <button class="mbtn alt" data-cmd="home">Home</button>
+    </div>
+  </div>
+
+  <!-- Level complete -->
+  <div id="done" class="overlay" hidden>
+    <div id="card">
+      <img id="cardBg" src="assets/level1/complete_card.webp" alt="" draggable="false">
+      <img class="star" id="star1" src="assets/level1/star_1.webp" alt="" draggable="false">
+      <img class="star" id="star2" src="assets/level1/star_2.webp" alt="" draggable="false">
+      <img class="star" id="star3" src="assets/level1/star_3.webp" alt="" draggable="false">
+      <div id="rows"></div>
+      <button id="btnNext" class="btn" aria-label="Next Level"><img src="assets/level1/btn_next.webp" alt="" draggable="false"></button>
+    </div>
+    <div id="doneLinks">
+      <button class="mbtn small" data-cmd="restart">Play again</button>
+      <button class="mbtn small alt" data-cmd="home">Home</button>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="js/profile.js"></script>
+<script src="js/level1.js"></script>
+</body>
+</html>

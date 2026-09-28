@@ -3,8 +3,8 @@
     python build_level1_art.py <work_l1_dir> <models_dir> <out_dir>
 
 work_l1_dir must hold direction.png (941x1672) and direction_x4.png (Real-ESRGAN 4x).
-Sprites are saved at 1.5x the direction image's scale (enough for a 1440 px wide phone),
-HUD pieces at 2x. layout.json records each piece's box in direction-image pixels.
+Sprites are saved at 1.5x the direction image's scale (enough for a 1440 px wide phone), the
+gate at 3x (it grows as the boy nears it), HUD pieces at 2x. layout.json records each piece's box in direction-image pixels.
 """
 import json
 import os
@@ -85,8 +85,10 @@ def main(work, models, out):
     m = ndi.binary_opening(m > 0.5, iterations=3).astype(np.float32)
     yy = np.arange(rgb.shape[0])[:, None] / S
     m = m * np.clip((372 - yy) / 60, 0, 1)          # base fades into the light at the threshold
+    xx = np.arange(rgb.shape[1])[None, :] / S
+    m = m * np.clip((xx - 22) / 26, 0, 1) * np.clip((308 - xx) / 26, 0, 1)   # side towers fade, no hard cut
     m = cv2.GaussianBlur(m, (0, 0), 2.4)
-    record("gate", gb, save_rgba(rgb, m, os.path.join(out, "gate.webp"), 1.5))
+    record("gate", gb, save_rgba(rgb, m, os.path.join(out, "gate.webp"), 3))   # 3x: it grows as the boy nears it
 
     # --- HUD pieces ----------------------------------------------------------------------
     def disc(shape, cx, cy, r, soft=1.5):
@@ -113,6 +115,10 @@ def main(work, models, out):
     yy, xx = np.mgrid[0:rgb.shape[0], 0:rgb.shape[1]].astype(np.float32)
     r = np.sqrt(((xx - 35 * S) / (34 * S)) ** 2 + ((yy - 40 * S) / (39 * S)) ** 2)
     record("hud_gem", gb2, save_rgba(rgb, np.clip((1 - r) / 0.3, 0, 1), os.path.join(out, "hud_gem.webp"), 2))
+    # player avatar (round badge)
+    ab = (2, 6, 96, 100)
+    rgb = box4(ab)
+    record("hud_avatar", ab, save_rgba(rgb, disc(rgb.shape, 46 * S, 46 * S, 43 * S, 2.5), os.path.join(out, "hud_avatar.webp"), 2))
     # pause button (rounded square, measured)
     pb = (848, 10, 936, 98)
     rgb = box4(pb)
