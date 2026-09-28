@@ -2,11 +2,12 @@
   "name": "rainbow-cascades",
   "version": "0.1.0",
   "private": true,
-  "description": "Rainbow Cascades - Slide, Bounce & Explore. Home screen preview (HTML/CSS, rendered by the Android WebView).",
+  "description": "Rainbow Cascades - Slide, Bounce & Explore. Home screen and Level 1 (HTML/CSS/JS, rendered by the Android WebView).",
   "type": "module",
   "scripts": {
     "serve": "npx --yes http-server public -p 8080 -c-1",
-    "screenshot": "node scripts/screenshot.mjs ../preview/home_screen_1080x2400.png 412 915 2.625 28 0"
+    "screenshot": "node scripts/screenshot.mjs ../preview/home_screen_1080x2400.png 412 915 2.625 28 0",
+    "level1": "node scripts/level1_shots.mjs shots/level1"
   },
   "devDependencies": {
     "@fontsource/fira-sans-condensed": "^5.2.5",

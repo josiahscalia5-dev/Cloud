@@ -4,7 +4,7 @@
 
 work_l1_dir must hold direction.png (941x1672) and direction_x4.png (Real-ESRGAN 4x).
 Sprites are saved at 1.5x the direction image's scale (enough for a 1440 px wide phone),
-HUD pieces at 2x. layout.json records each piece's box in direction-image pixels.
+the gate at 2.5x (it ends up filling the screen), HUD pieces at 2x. layout.json records each piece's box in direction-image pixels.
 """
 import json
 import os
@@ -84,9 +84,10 @@ def main(work, models, out):
     m[np.isin(lab, list(edge))] = 0
     m = ndi.binary_opening(m > 0.5, iterations=3).astype(np.float32)
     yy = np.arange(rgb.shape[0])[:, None] / S
-    m = m * np.clip((372 - yy) / 60, 0, 1)          # base fades into the light at the threshold
+    m = m * np.clip((352 - yy) / 70, 0, 1)          # base fades into the light at the threshold
     m = cv2.GaussianBlur(m, (0, 0), 2.4)
-    record("gate", gb, save_rgba(rgb, m, os.path.join(out, "gate.webp"), 1.5))
+    # 2.5x: the gate grows to the full screen width at the end of the level
+    record("gate", gb, save_rgba(rgb, m, os.path.join(out, "gate.webp"), 2.5))
 
     # --- HUD pieces ----------------------------------------------------------------------
     def disc(shape, cx, cy, r, soft=1.5):
@@ -103,6 +104,10 @@ def main(work, models, out):
                                              disc(rgb.shape, (308 - sb[0]) * S, (27 - sb[1]) * S, 7 * S, 3))))
     a = np.minimum(shape, np.clip((get_mask_birefnet(rgb, bir) - 0.2) / 0.6, 0, 1))
     record("hud_stopwatch", sb, save_rgba(rgb, a, os.path.join(out, "hud_stopwatch.webp"), 2))
+    # player portrait in the HUD (disc)
+    ab = (8, 8, 102, 102)
+    rgb = box4(ab)
+    record("hud_avatar", ab, save_rgba(rgb, disc(rgb.shape, 46.5 * S, 46.5 * S, 43.5 * S, 2.5), os.path.join(out, "hud_avatar.webp"), 2))
     # star coin in the HUD
     cb = (486, 18, 556, 90)
     rgb = box4(cb)

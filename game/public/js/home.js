@@ -40,8 +40,8 @@
   var TOP_P0 = 3, BOTTOM_P1 = 553;       // reference panel's inner top / bottom edge
   var BG = { p0: 7 - 320, rows: 320 + 543 + 30 }; // bg_home.webp: first row's P, height in P
 
-  // Demo profile shown in the preview; the game will read this from the save file.
-  var profile = { level: 16, xp: 0.94, coins: 12450, gems: 320 };
+  // Level, XP and wallet, shared with the levels (js/profile.js).
+  var profile = window.RCProfile ? RCProfile.load() : { level: 16, xp: 0.94, coins: 12450, gems: 320 };
 
   var screen = document.getElementById("screen");
 
@@ -127,12 +127,17 @@
       });
       target.addEventListener("click", function () {
         if (navigator.vibrate) navigator.vibrate(12);
+        if (el.dataset.action === "Play") { location.href = "level1.html"; return; }
         toast("Preview only — “" + el.dataset.action + "” isn't built yet");
       });
     });
   }
 
   window.addEventListener("resize", layout);
+  // coming back from a level (also from the back-forward cache): show the new wallet
+  window.addEventListener("pageshow", function () {
+    if (window.RCProfile) { Object.assign(profile, RCProfile.load()); render(); }
+  });
   window.RainbowCascadesHome = { layout: layout, setProfile: function (p) { Object.assign(profile, p); render(); } };
 
   layout();
