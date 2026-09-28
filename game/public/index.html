@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a5ad4">
+<title>Rainbow Cascades</title>
+<link rel="preload" href="assets/home/bg_home.webp" as="image">
+<link rel="stylesheet" href="css/home.css">
+</head>
+<body>
+<div id="screen" class="home" aria-label="Rainbow Cascades home screen">
+  <div id="bgWide" aria-hidden="true"></div>
+  <img id="bg" src="assets/home/bg_home.webp" alt="" draggable="false">
+
+  <!-- Top bar (live values) -->
+  <div id="lvlBand" class="el" aria-hidden="true"></div>
+  <img id="avatar" class="el btn" src="assets/home/avatar.webp" alt="Profile" draggable="false" data-action="Profile">
+  <div id="lvlText" class="el">Lvl <span id="lvl">16</span></div>
+  <div id="xp" class="el" role="progressbar" aria-label="Experience"><div id="xpFill"></div><div id="xpGloss"></div></div>
+  <div id="walletCoins" class="el pill"><span id="coins" class="num">12,450</span></div>
+  <div id="walletGems" class="el pill"><span id="gems" class="num">320</span></div>
+  <img id="coinIcon" class="el" src="assets/home/icon_coin.webp" alt="Coins" draggable="false">
+  <img id="gemIcon" class="el" src="assets/home/icon_gem.webp" alt="Gems" draggable="false">
+  <img id="gear" class="el btn" src="assets/home/btn_gear.webp" alt="Settings" draggable="false" data-action="Settings">
+
+  <img id="title" class="el" src="assets/home/title.webp" alt="Rainbow Cascades - Slide, Bounce &amp; Explore" draggable="false">
+
+  <!-- Side menu -->
+  <img id="btnMissions" class="el btn" src="assets/home/btn_missions.webp" alt="Missions" draggable="false" data-action="Missions">
+  <img id="btnMap" class="el btn" src="assets/home/btn_map.webp" alt="Map" draggable="false" data-action="Map">
+  <img id="btnShop" class="el btn" src="assets/home/btn_shop.webp" alt="Shop" draggable="false" data-action="Shop">
+  <img id="btnDaily" class="el btn" src="assets/home/btn_daily.webp" alt="Daily" draggable="false" data-action="Daily">
+  <img id="btnRewards" class="el btn" src="assets/home/btn_rewards.webp" alt="Rewards" draggable="false" data-action="Rewards">
+
+  <img id="btnPlay" class="el btn" src="assets/home/btn_play.webp" alt="Play" draggable="false" data-action="Play">
+
+  <!-- Bottom navigation -->
+  <div id="nav" class="el">
+    <img src="assets/home/nav.webp" alt="" draggable="false">
+    <button class="tab" data-action="Worlds" aria-label="Worlds"></button>
+    <button class="tab" data-action="Characters" aria-label="Characters"></button>
+    <button class="tab" data-action="Inventory" aria-label="Inventory"></button>
+    <button class="tab" data-action="Companions" aria-label="Companions"></button>
+    <button class="tab" data-action="Shop" aria-label="Shop"></button>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="js/home.js"></script>
+</body>
+</html>

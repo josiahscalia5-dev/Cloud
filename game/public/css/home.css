@@ -1,0 +1,134 @@
+@font-face {
+  font-family: "Fira Sans Condensed";
+  font-weight: 600;
+  font-display: block;
+  src: url("../fonts/fira-sans-condensed-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Sans Condensed";
+  font-weight: 700;
+  font-display: block;
+  src: url("../fonts/fira-sans-condensed-latin-700-normal.woff2") format("woff2");
+}
+
+:root {
+  --sky-top: #0a5ad4;   /* top of the extended sky, also shown if a screen is taller than the art */
+  --navy: #001033;
+  --u: 1px;             /* one pixel of the reference panel, set by js/home.js */
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky-top);
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+#screen {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  font-family: "Fira Sans Condensed", "Roboto Condensed", sans-serif;
+  color: #fff;
+  visibility: hidden;   /* shown once layout + fonts are ready */
+}
+#screen.ready { visibility: visible; }
+
+#bg, #bgWide { position: absolute; pointer-events: none; }
+#bgWide {
+  inset: -40px;
+  background: url("../assets/home/bg_home.webp") center 70% / cover no-repeat;
+  filter: blur(18px) saturate(1.1);
+  display: none;
+}
+#screen.wide #bgWide { display: block; }
+
+.el { position: absolute; display: block; }
+img.el { pointer-events: none; }
+img.el.btn, #nav .tab { pointer-events: auto; cursor: pointer; }
+.btn { transition: transform 90ms ease-out, filter 90ms ease-out; transform-origin: 50% 50%; }
+.btn.pressed { transform: scale(0.93); filter: brightness(1.12); }
+
+/* ---- top bar: rebuilt so the numbers are live ---- */
+#lvlBand {
+  border-radius: 0 calc(12 * var(--u)) calc(12 * var(--u)) 0;
+  background: linear-gradient(90deg, rgba(0, 16, 46, 0.95) 0%, rgba(0, 30, 78, 0.9) 55%, rgba(0, 45, 110, 0.55) 80%, rgba(0, 60, 140, 0) 100%);
+}
+#lvlText {
+  font-weight: 600;
+  font-size: calc(16.2 * var(--u));
+  line-height: 1;
+  letter-spacing: calc(0.1 * var(--u));
+  text-shadow: 0 calc(0.8 * var(--u)) calc(1.2 * var(--u)) rgba(0, 10, 40, 0.8);
+  white-space: nowrap;
+}
+#xp {
+  border-radius: calc(6.5 * var(--u));
+  background: #031045;
+  box-shadow: 0 0 0 calc(1.1 * var(--u)) #020a30, inset 0 calc(1 * var(--u)) calc(2 * var(--u)) rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+#xpFill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  border-radius: calc(6.5 * var(--u));
+  background: linear-gradient(180deg, #8ffbff 0%, #2fdcff 28%, #0cc4ff 60%, #00a6f2 100%);
+}
+#xpGloss {
+  position: absolute; left: 8%; right: 12%; top: 22%; height: 26%;
+  border-radius: calc(4 * var(--u));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.85) 12%, rgba(255, 255, 255, 0.15) 30%, rgba(255, 255, 255, 0) 55%, rgba(255, 255, 255, 0.7) 72%, rgba(255, 255, 255, 0) 85%);
+}
+.pill {
+  border-radius: calc(18 * var(--u));
+  background: linear-gradient(180deg, #03205a 0%, #011440 45%, #000b2c 100%);
+  box-shadow:
+    inset 0 calc(1.2 * var(--u)) 0 rgba(40, 110, 220, 0.9),
+    inset 0 0 0 calc(1 * var(--u)) rgba(10, 60, 150, 0.9),
+    0 calc(1 * var(--u)) calc(2.5 * var(--u)) rgba(0, 10, 50, 0.45);
+}
+#walletGems { background: linear-gradient(180deg, #072a66 0%, #02184a 45%, #000e33 100%); }
+.num {
+  position: absolute;
+  font-weight: 600;
+  font-size: calc(20.6 * var(--u));
+  line-height: 1;
+  letter-spacing: calc(0.15 * var(--u));
+  text-shadow: 0 calc(1 * var(--u)) calc(1.5 * var(--u)) rgba(0, 8, 35, 0.9);
+  white-space: nowrap;
+}
+
+/* ---- bottom navigation ---- */
+#nav img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#nav .tab {
+  position: absolute; top: 12%; bottom: 4%;
+  width: 19.6%;
+  border: 0; padding: 0; background: transparent;
+  border-radius: calc(10 * var(--u));
+}
+#nav .tab.pressed { background: rgba(120, 190, 255, 0.18); }
+
+/* ---- preview toast ---- */
+#toast {
+  position: absolute;
+  left: 50%;
+  bottom: 24%;
+  transform: translate(-50%, 12px);
+  max-width: 86%;
+  padding: calc(8 * var(--u)) calc(14 * var(--u));
+  border-radius: calc(12 * var(--u));
+  background: rgba(0, 12, 45, 0.92);
+  box-shadow: inset 0 0 0 calc(1.2 * var(--u)) rgba(90, 160, 255, 0.8), 0 calc(3 * var(--u)) calc(10 * var(--u)) rgba(0, 0, 0, 0.35);
+  font-weight: 600;
+  font-size: calc(14 * var(--u));
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
