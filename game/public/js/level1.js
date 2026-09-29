@@ -341,7 +341,7 @@
     }
 
     orb = billboard("laser_orb", 1.1, 1.1, "orb");
-    orb.x = 1.7; orb.z = fakeEnd + 2.5;
+    orb.x = 1.7; orb.z = fakeEnd - 0.5;
     cloud = billboard("cloud_monster", 1.9, 1.9 / 1.181, "monster");
     Object.assign(cloud, { alpha: 0, x: 0.4, y: 1.6, z: 0, target: null, struck: false, tWarn: 0, tStrike: 0, next: 0 });
     warnMark = billboard("icon_warning", 0.32, 0.32 / 1.127, "warnMark");
@@ -590,7 +590,7 @@
 
   function updateCloud() {
     var active = stage === 4 && mode !== "done" && mode !== "over";
-    cloud.alpha += ((active ? 1 : 0) - cloud.alpha) * 0.05;
+    cloud.alpha += ((active ? 1 : 0) - cloud.alpha) * (active ? 0.05 : 0.12);
     cloud.x = cam.x * 0.35 + 0.1 + Math.sin(clock / 900) * 0.25;
     cloud.y = 0.95 + Math.sin(clock / 500) * 0.08 + (1 - cloud.alpha) * 1.5;
     cloud.z = boy.z + 3.5;
@@ -802,7 +802,7 @@
   }
 
   function updateHud() {
-    var at = boy.on ? boy.on.step : 0;
+    var at = mode === "done" ? steps.length : boy.on ? boy.on.step : 0;
     Array.prototype.forEach.call(document.querySelectorAll("#seqOrbs .orb"), function (o, i) {
       o.classList.toggle("done", stage > 0 || i <= at);
       o.classList.toggle("next", stage === 0 && i === at + 1);
@@ -935,7 +935,7 @@
     gate.img.style.filter = mode === "gate" ? "brightness(" + (1.08 + 0.12 * Math.sin(clock / 220)) + ") saturate(1.15)" : "";
     // laser orb over the dark zone, cloud monster over the rainbow road
     var oz = orb.z - cam.z;
-    orb.el.style.display = oz > 1 && oz < 34 && stage >= 2 && stage <= 4 ? "" : "none";
+    orb.el.style.display = oz > 2.5 && oz < 34 && (stage === 2 || stage === 3) ? "" : "none";
     placeBB(orb, orb.x, 1.9 + Math.sin(clock / 700) * 0.1, orb.z, " scale(" + (1 + 0.05 * Math.sin(clock / 180)) + ")");
     cloud.el.style.display = cloud.alpha > 0.02 ? "" : "none";
     cloud.img.style.opacity = cloud.alpha;
