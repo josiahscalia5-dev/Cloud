@@ -7,7 +7,8 @@
   "scripts": {
     "serve": "npx --yes http-server public -p 8080 -c-1",
     "screenshot": "node scripts/screenshot.mjs ../preview/home_screen_1080x2400.png 412 915 2.625 28 0",
-    "screenshot:level1": "node scripts/screenshot.mjs ../preview/level1_screen_1080x2400.png 412 915 2.625 28 0 level1.html"
+    "screenshot:level1": "node scripts/screenshot.mjs ../preview/level1_screen_1080x2400.png 412 915 2.625 28 0 level1.html",
+    "check:level1": "node scripts/check_level1.mjs"
   },
   "devDependencies": {
     "@fontsource/fira-sans-condensed": "^5.2.5",

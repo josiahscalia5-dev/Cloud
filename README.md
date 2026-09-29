@@ -31,6 +31,11 @@ centred, and the phone shows the sheet's dark navy above and below it.
 - Swipe controls (preview): swipe left or right and the boy turns his whole body that way and
   steps sideways; swipe up and he hops. The pause button pauses. Arrow keys work in a browser.
 
+**Visual lock:** this Level 1 screen is the visual standard for the rest of Level 1.
+`npm run check:level1` (in `game/`) fails if the screen at rest stops matching reference panel 2
+(a 3-pixel shift of the boy or a panel is enough to fail it), if a swipe control stops working, or
+if swiping changes anything on screen other than the boy.
+
 **Home screen:** the painted panel, with the side menu, PLAY, the bottom tabs, the avatar and
 the settings gear as tappable pieces over their painted twins. The level, coin and gem numbers are
 live. PLAY opens Level 1; the other buttons say they are not built yet.
@@ -45,6 +50,7 @@ Run it locally:
 cd game && npm install && npm run serve        # then open http://localhost:8080 at phone size
 npm run screenshot                             # re-capture preview/home_screen_1080x2400.png
 npm run screenshot:level1                      # re-capture preview/level1_screen_1080x2400.png
+npm run check:level1                           # Level 1 screen still matches the reference
 ```
 
 ## How the artwork was produced
