@@ -22,7 +22,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: +dpr, isMobile: true, hasTouch: true });
 page.on("console", (m) => console.log("[page]", m.text()));
 page.on("pageerror", (e) => console.log("[pageerror]", e.message));
-await page.goto(`http://127.0.0.1:${port}/${pageName}?safeTop=${safeTop}&safeBottom=${safeBottom}`);
+await page.goto(`http://127.0.0.1:${port}/${pageName}?safeTop=${safeTop}&safeBottom=${safeBottom}${process.env.RC_QUERY || ""}`);
 await page.waitForSelector("body[data-ready='1']", { timeout: 15000 });
 await page.waitForTimeout(300);
 await page.screenshot({ path: out });

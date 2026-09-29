@@ -3,28 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0a5ad4">
+<meta name="theme-color" content="#040a26">
 <title>Rainbow Cascades</title>
 <link rel="preload" href="assets/home/bg_home.webp" as="image">
 <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
 <div id="screen" class="home" aria-label="Rainbow Cascades home screen">
-  <div id="bgWide" aria-hidden="true"></div>
-  <img id="bg" src="assets/home/bg_home.webp" alt="" draggable="false">
+  <div id="frame" aria-hidden="true"><img id="bg" src="assets/home/bg_home.webp" alt="" draggable="false"></div>
 
-  <!-- Top bar (live values) -->
-  <div id="lvlBand" class="el" aria-hidden="true"></div>
+  <!-- Top bar and title are painted in the art; the level, coin and gem numbers are live -->
   <img id="avatar" class="el btn" src="assets/home/avatar.webp" alt="Profile" draggable="false" data-action="Profile">
-  <div id="lvlText" class="el">Lvl <span id="lvl">16</span></div>
-  <div id="xp" class="el" role="progressbar" aria-label="Experience"><div id="xpFill"></div><div id="xpGloss"></div></div>
-  <div id="walletCoins" class="el pill"><span id="coins" class="num">12,450</span></div>
-  <div id="walletGems" class="el pill"><span id="gems" class="num">320</span></div>
-  <img id="coinIcon" class="el" src="assets/home/icon_coin.webp" alt="Coins" draggable="false">
-  <img id="gemIcon" class="el" src="assets/home/icon_gem.webp" alt="Gems" draggable="false">
+  <img id="numLvl" class="el" src="assets/home/num_lvl.webp" alt="" draggable="false">
+  <img id="numCoins" class="el" src="assets/home/num_coins.webp" alt="" draggable="false">
+  <img id="numGems" class="el" src="assets/home/num_gems.webp" alt="" draggable="false">
+  <span id="lvl" class="el num" aria-label="Level">16</span>
+  <span id="coins" class="el num" aria-label="Coins">12,450</span>
+  <span id="gems" class="el num" aria-label="Gems">320</span>
   <img id="gear" class="el btn" src="assets/home/btn_gear.webp" alt="Settings" draggable="false" data-action="Settings">
-
-  <img id="title" class="el" src="assets/home/title.webp" alt="Rainbow Cascades - Slide, Bounce &amp; Explore" draggable="false">
 
   <!-- Side menu -->
   <img id="btnMissions" class="el btn" src="assets/home/btn_missions.webp" alt="Missions" draggable="false" data-action="Missions">
