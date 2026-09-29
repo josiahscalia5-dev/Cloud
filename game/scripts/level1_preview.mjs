@@ -1,7 +1,11 @@
-// Plays the whole of Level 1 in a phone-sized Chromium (as the Android WebView renders it) and
-// saves screenshots of every stage. A small bot taps like a careful player: it makes one wrong
-// colour on purpose, takes the secret rainbow route and the gold path, and waits for flat,
-// slow or safe blocks. A second run checks "out of hearts" on the fake platforms.
+// Plays the whole of Level 1 in a phone-sized Chromium (as the Android WebView renders it), checks
+// that every section comes up in order and the level can be finished, and saves screenshots.
+//
+// Run A takes the secret rainbow route and the gold path (screenshots of every section);
+// run B stays on the main path and takes the safe route; run C checks "out of hearts".
+// A small bot taps like a careful player: it makes one wrong colour on purpose in run A, then waits
+// for flat, level or slow blocks and keeps off the block the cloud is about to strike.
+//
 // Usage: node scripts/level1_preview.mjs <out_dir> [width height dpr safeTop safeBottom seed]
 import { chromium } from "playwright";
 import http from "node:http";
@@ -33,66 +37,100 @@ const until = async (fn, ms = 10000) => {
   while (Date.now() - t0 < ms) { if (await fn()) return; await page.waitForTimeout(40); }
   throw new Error("timed out");
 };
-const open = async () => {
-  await page.goto(`http://127.0.0.1:${port}/level1.html?seed=${seed}&safeTop=${safeTop}&safeBottom=${safeBottom}`);
+const open = async (s = seed) => {
+  await page.goto(`http://127.0.0.1:${port}/level1.html?seed=${s}&safeTop=${safeTop}&safeBottom=${safeBottom}`);
   await page.waitForSelector("body[data-ready='1']", { timeout: 20000 });
 };
+const names = ["color", "rotate", "cloud", "fake", "secret", "move", "path", "gate"];
 
+// Plays to Level Complete. Returns the sections in the order they came up and the routes used.
+async function playThrough({ secret, fork, shots }) {
+  const order = [0], routes = new Set();
+  const mid = new Set();
+  let secretShot = false;
+  const t0 = Date.now();
+  for (;;) {
+    const s = await state();
+    if (s.route) routes.add(s.route);
+    if (s.mode === "done") break;
+    if (s.mode === "over") throw new Error("the bot ran out of hearts at section " + (s.stage + 1));
+    if (Date.now() - t0 > 360000) throw new Error("bot stuck at " + JSON.stringify(s));
+    if (s.stage !== order[order.length - 1]) {
+      order.push(s.stage);
+      if (shots) {
+        await page.waitForTimeout(500);
+        await shot(`level1_s${s.stage + 1}_${names[s.stage]}_card.png`);           // with the section card
+        if (s.stage === 6) { await page.waitForTimeout(1500); await shot("level1_s7_path_fork.png"); }
+        if (s.stage === 2) {                                                          // the cloud swooping in
+          await page.waitForTimeout(700);
+          await shot("level1_s3_cloud_swoop.png");
+        }
+      }
+    }
+    if (shots) {
+      const stepIn = s.step - s.stageStart[s.stage];
+      if (s.stage === 1 && stepIn === 1 && !mid.has("flip")) {                        // the next block mid-flip
+        mid.add("flip");
+        await until(async () => { const r = await page.evaluate(() => window.RCLevel1.nextRoll()); return r > 70 && r < 150; }, 6000).catch(() => {});
+        await shot("level1_s2_rotate_play.png");
+      }
+      if (s.stage === 2 && stepIn === 3 && !mid.has("chase")) {                       // the cloud closing in on him
+        mid.add("chase");
+        await until(async () => { const d = (await state()).cloudD; return d !== null && d < 2.2; }, 5000).catch(() => {});
+        await shot("level1_s3_cloud_play.png");
+      }
+      if (s.secret && !secretShot && s.stage === 4) { secretShot = true; await page.waitForTimeout(300); await shot("level1_s5_secret_play.png"); }
+      if (stepIn === 2 && [0, 3, 5, 6, 7].includes(s.stage) && !mid.has(s.stage) && s.mode === "play") {
+        mid.add(s.stage);
+        await shot(`level1_s${s.stage + 1}_${names[s.stage]}_play.png`);
+      }
+    }
+    const route = s.stage === 4 ? (secret ? "secret" : null) : s.stage === 6 ? fork : null;
+    const tap = await page.evaluate((r) => window.RCLevel1.bot(r), route);
+    if (tap) { await page.touchscreen.tap(tap.x, tap.y); await page.waitForTimeout(120); }
+    else await page.waitForTimeout(40);
+  }
+  return { order, routes: [...routes], final: await state() };
+}
+
+const expectOrder = JSON.stringify([0, 1, 2, 3, 4, 5, 6, 7]);
+function check(name, r, want) {
+  const ok = JSON.stringify(r.order) === expectOrder && r.final.mode === "done" && want.every((x) => r.routes.includes(x));
+  console.log(`${name}: sections ${r.order.map((i) => i + 1).join(" > ")}, routes ${r.routes.join(",")}, ` +
+    `hearts lost ${r.final.heartsLost}, coins ${r.final.coins}, gems ${r.final.gems}, tokens ${r.final.tokens}, ` +
+    `secret ${r.final.secret}, time ${(r.final.elapsed / 1000).toFixed(1)} s -> ${ok ? "OK" : "FAILED"}`);
+  if (!ok) errors.push(name + " did not play through every section in order");
+}
+
+// --- run A: screenshots, secret route, gold path ---
 await open();
 await page.evaluate(() => localStorage.clear());
-await page.waitForTimeout(2200);                       // the hint glow on the first row
+console.log("sections:", (await page.evaluate(() => window.RCLevel1.sections)).join(" | "));
+await page.waitForTimeout(2200);                       // the hint on the first row
 await shot("level1_start.png");
-
-// the opening jump, frozen mid-air like the direction image
 await page.evaluate(() => { window.RCLevel1.elapsed(28000); window.RCLevel1.pose(0.42); });
 await page.waitForTimeout(200);
 await shot("level1_jump.png");
 await open();
 await page.waitForTimeout(300);
-
-// one wrong colour first
-const wrong = await page.evaluate(() => window.RCLevel1.wrongColor());
+const wrong = await page.evaluate(() => window.RCLevel1.wrongColor());    // one wrong colour first
 await page.touchscreen.tap(wrong.x, wrong.y);
 await page.waitForTimeout(700);
 await shot("level1_wrong.png");
 await until(async () => (await state()).mode === "play");
-
-// then the bot plays to the end, photographing each stage
-const names = ["color", "rotate", "move", "fake", "cloud", "path", "gate"];
-let seen = 0, mid = new Set(), secretShot = false, t0 = Date.now();
-for (;;) {
-  const s = await state();
-  if (s.mode === "done") break;
-  if (Date.now() - t0 > 300000) throw new Error("bot stuck at " + JSON.stringify(s));
-  if (s.stage > seen) {
-    seen = s.stage;
-    await page.waitForTimeout(500);
-    await shot(`level1_stage${seen + 1}_${names[seen]}.png`);          // with the stage card
-    if (seen === 5) { await page.waitForTimeout(1500); await shot("level1_stage6_fork.png"); }
-  }
-  if (s.stage === 1 && s.step === 7 && !mid.has("flip")) {              // the next block mid-flip
-    mid.add("flip");
-    await until(async () => { const r = await page.evaluate(() => window.RCLevel1.nextRoll()); return r > 70 && r < 150; }, 6000).catch(() => {});
-    await shot("level1_stage2_play.png");
-  }
-  if (s.secret && !secretShot) { secretShot = true; await page.waitForTimeout(250); await shot("level1_secret.png"); }
-  const stepIn = s.step - [0, 6, 12, 18, 24, 31, 37][s.stage];
-  if (stepIn === 2 && !mid.has(s.stage) && s.mode === "play") {
-    mid.add(s.stage);
-    if (s.stage === 4) await until(async () => await page.evaluate(() => !!document.querySelector(".warnMark") &&
-      document.querySelector(".warnMark").style.display !== "none"), 6000).catch(() => {});
-    await shot(`level1_stage${s.stage + 1}_play.png`);
-  }
-  const tap = await page.evaluate((st) => window.RCLevel1.bot(st === 1 ? "secret" : "gold"), s.stage);
-  if (tap) { await page.touchscreen.tap(tap.x, tap.y); await page.waitForTimeout(120); }
-  else await page.waitForTimeout(50);
-}
+const a = await playThrough({ secret: true, fork: "gold", shots: true });
 await page.waitForTimeout(2700);
 await shot("level1_complete.png");
-const fin = await state();
-console.log("final state", JSON.stringify(fin));
+check("run A (secret route, gold path)", a, ["secret", "gold"]);
 
-// out of hearts: jump onto fake blocks until the hearts run out, then try again
+// --- run B: main path, safe route ---
+await open(11);
+await page.waitForTimeout(300);
+const b = await playThrough({ secret: false, fork: "safe", shots: false });
+check("run B (main path, safe route)", b, ["safe"]);
+if (b.final.secret) errors.push("run B should not have found the secret route");
+
+// --- run C: out of hearts on the fake platforms, then try again ---
 await open();
 await page.evaluate(() => window.RCLevel1.goto(3));
 await page.waitForTimeout(1900);
@@ -113,9 +151,10 @@ await shot("level1_out_of_hearts.png");
 await page.click("#nohearts [data-cmd=retry]");
 await until(async () => (await state()).mode === "play");
 const after = await state();
-console.log("after retry", JSON.stringify(after));
-if (after.hearts !== 3 || after.stage !== 3) { errors.push("retry did not restore the checkpoint"); }
+console.log("run C (out of hearts): back at section", after.stage + 1, "with", after.hearts, "hearts");
+if (after.hearts !== 3 || after.stage !== 3) errors.push("retry did not restore the checkpoint");
 
-if (errors.length) { console.log("PAGE ERRORS:\n" + errors.join("\n")); process.exitCode = 1; }
+if (errors.length) { console.log("PROBLEMS:\n" + errors.join("\n")); process.exitCode = 1; }
+else console.log("all checks passed");
 await browser.close();
 server.close();

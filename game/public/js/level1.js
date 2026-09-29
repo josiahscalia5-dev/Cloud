@@ -1,16 +1,20 @@
 /*
  * Rainbow Cascades - Level 1: the whole course, from the first red block to the Rainbow Gate.
  *
- * Seven stages in a row (the counter in the top panel), each a stretch of jelly blocks:
+ * Eight sections in a row, in the order of the reference (the counter in the top panel):
  *   1 Follow the Color Sequence   hop onto the next colour (red, yellow, blue, green, purple, pink)
  *   2 Platforms Rotate            blocks flip over; jump while they are flat. Golden rings give tokens.
- *                                 A hidden rainbow block off to the left starts the secret route.
- *   3 Moving Platforms            blocks slide from side to side; jump as they slow down
+ *   3 Dodge the Cloud             the cloud monster swoops in and chases you down the rainbow road:
+ *                                 it closes in whenever you stop and strikes the flashing block
  *   4 Watch for Fake Platforms    a dark zone; the cracked twin of each pair crumbles
- *   5 Dodge the Cloud             the cloud monster chases you and strikes a flashing block
- *   6 Choose Your Path            a safe blue route or a gold route with more rewards and traps
- *   7 Reach the Rainbow Gate      rainbow road, then leap into the gate
- * Falling or being struck costs a heart; with none left the stage starts over.
+ *   5 Secret Rainbow Route        the path goes on, and a hidden rainbow road curves away on the left
+ *   6 Moving Platforms            blocks slide, lift and flip; jump when they come to you
+ *   7 Choose Your Path            a safe blue route or a gold route with more rewards and traps
+ *   8 Reach the Rainbow Gate      rainbow road, then leap into the gate
+ * Falling or being struck costs a heart; with none left the section starts over.
+ *
+ * The boy is seen from behind and always faces down the path. His picture is split at the waist
+ * (boy_torso over boy_legs): the legs swap sides for each stride, and he leans into sideways hops.
  *
  * Screen layout uses "D" pixels: the pixel grid of the Level 1 direction image (941 x 1672).
  * One D is `u` CSS pixels. The play field is real 3D (CSS perspective): a pinhole camera whose
@@ -49,7 +53,8 @@
   var CAM_LAG = 110;               // ms: the camera eases after the boy, so his jumps read on screen
   var BLOCK = { w: 0.8, d: 0.62, h: 0.26 };
   var LANE = 0.46, ROW_DZ = 1.3;
-  var BOY_H = 0.88, BOY_AR = { jump: 462 / 655, run: 364 / 402 };
+  var RIG = { ar: 332 / 442, hipX: 0.529, beltY: 0.667 };   // boy_torso / boy_legs (see build_level1_extras.py)
+  var BOY_H = 0.9, BOY_W = BOY_H * RIG.ar;
   var STAND = -0.1;                // he lands a little in front of a block's centre
   var JUMP_MS = 540, JUMP_PEAK = 0.8;
   var WARN_MS = 850, STRIKE_MS = 320;
@@ -59,17 +64,19 @@
     rainbow: "#ffffff", stone: "#ff78e0", stonefake: "#ff78e0", gold: "#ffc53a", goldfake: "#ffc53a", ice: "#6cc8ff" };
   var COIN_VALUE = 10, GEM_VALUE = 5, CLEAR_BONUS = 50, PERFECT_BONUS = 100;
   var ISLANDS = [0.785, 0.767, 0.723, 0.889, 0.772];   // width / height of island_1..5
+  var AR = { waterfall: 911 / 1063, tower: 477 / 743, gem_purple: 112 / 172, gem_blue: 144 / 214 };
 
   var STAGES = [
     { title: "Follow the Color Sequence!", say: "Jump on the matching colors in order!" },
     { title: "Platforms Rotate!", say: ["Platforms Rotate!", "Time your jumps!"], icon: "icon_rotate", tip: "Jump while a block is flat" },
-    { title: "Moving Platforms!", say: ["Moving Platforms!", "Jump, slide and flip!"], icon: "icon_up", tip: "Jump when a block slows down" },
+    { title: "Dodge the Cloud!", say: ["Dodge the Cloud!", "It chases you!"], icon: "icon_warning", tip: "Keep moving and stay off the flashing block" },
     { title: "Watch for Fake Platforms!", say: ["Watch for Fake Platforms!", "They disappear!"], icon: "icon_fake", tip: "Cracked blocks crumble", dark: true },
-    { title: "Dodge the Cloud!", say: ["Dodge the Cloud!", "It chases you!"], icon: "icon_warning", tip: "Keep off the flashing block" },
+    { title: "Take the Secret Rainbow Route!", say: "Take the secret rainbow route!", tip: "Look for the rainbow on the left" },
+    { title: "Moving Platforms!", say: ["Moving Platforms!", "Jump, slide and flip!"], icon: "icon_up", tip: "Jump when a block comes to you" },
     { title: "Choose Your Path!", say: ["Choose Your Path!", "Safer Route or Bigger Rewards?"], icon: "icon_left", icon2: "icon_right", tip: "Blue is safe, gold pays more" },
     { title: "Reach the Rainbow Gate!", say: ["Reach the Rainbow Gate!", "Complete the level!"], tip: "Almost there!" }
   ];
-  var SECRET = { say: "Take the secret rainbow route!" };
+  var S_COLOR = 0, S_ROTATE = 1, S_CLOUD = 2, S_FAKE = 3, S_SECRET = 4, S_MOVE = 5, S_PATH = 6, S_GATE = 7;
 
   var A = "assets/level1/";
   var q = new URLSearchParams(location.search);
@@ -199,7 +206,7 @@
       var s = { i: steps.length, stage: stage, z: z, plats: [] };
       defs.forEach(function (d) {
         var p = Object.assign({ x: 0, style: "rainbow", kind: "plain", route: "main", entry: false }, d);
-        Object.assign(p, { id: plats.length, step: s.i, stage: stage, z: z, bx: p.x, dx: 0, dy: 0, roll: 0, fade: 1,
+        Object.assign(p, { id: plats.length, step: s.i, stage: stage, z: z, bx: p.x, dx: 0, dy: 0, ly: 0, roll: 0, fade: 1,
           gone: false, next: [], el: null, t: p.t || 0, flash: 0, red: 0 });
         plats.push(p);
         s.plats.push(p);
@@ -212,11 +219,12 @@
     function gem(p, kind) { addPick(kind || "gem_purple", p.x, 0.62, p.z, p); }
     function either() { return rand() < 0.5 ? 0 : 1; }
     function ringBetween(a, b, y) { addRing((a.x + b.x) / 2, y || 1.2, (a.z + b.z) / 2); }
+    function begin(stage) { stageStart.push(steps.length); return step(stage, [{ style: stage === S_FAKE ? "stone" : "rainbow" }]); }
 
     // 1 - follow the colour sequence: two blocks a row, one of them the next colour
     stageStart.push(steps.length);
     var spare = SEQ[1 + Math.floor(rand() * 5)];
-    step(0, [{ x: -LANE, style: "red", kind: "color", color: "red" }, { x: LANE, style: spare, kind: "color", color: spare }]);
+    step(S_COLOR, [{ x: -LANE, style: "red", kind: "color", color: "red" }, { x: LANE, style: spare, kind: "color", color: spare }]);
     for (var i = 1; i < SEQ.length; i++) {
       var c = either();
       var near = [SEQ[i + 1], SEQ[i - 1]].filter(Boolean);
@@ -225,74 +233,78 @@
       var defs = [];
       defs[c] = { x: c ? LANE : -LANE, style: SEQ[i], kind: "color", color: SEQ[i] };
       defs[1 - c] = { x: c ? -LANE : LANE, style: decoy, kind: "color", color: decoy };
-      var s = step(0, defs);
+      var s = step(S_COLOR, defs);
       if (i <= 2) coin(s.plats[c]);
       if (i === 3) gem(s.plats[either()], "gem_purple");
       if (i === 5) gem(s.plats[c], "gem_blue");
     }
 
-    // 2 - platforms rotate (flip over), golden rings between them, and the secret route's entrance
-    stageStart.push(steps.length);
-    var pad = step(1, [{ style: "rainbow" }]);
-    var rot = [[-0.3], [0.3, -1.1], [0.3, -1.25], [-0.1, -1.25], [0.3, -1.25]];
-    var prev = pad.plats[0], prevSecret = null;
-    rot.forEach(function (r, j) {
-      var defs = [{ x: r[0], style: SEQ[(j + 1) % 6], kind: "rotate", period: 2600 - j * 100, flip: 900, t: 400 + j * 650 }];
-      if (r[1] !== undefined) defs.push({ x: r[1], style: "rainbow", kind: "secret", route: "secret", entry: j === 1, last: j === 4 });
-      var s = step(1, defs);
-      if (j > 0) ringBetween(prev, s.plats[0]);
-      prev = s.plats[0];
-      var sec = s.plats[1];
-      if (sec) {
-        if (prevSecret) ringBetween(prevSecret, sec, 1.15);
-        if (j === 2) gem(sec, "gem_blue");
-        if (j === 3) gem(sec, "gem_purple");
-        if (j === 4) coin(sec);
-        prevSecret = sec;
-      }
+    // 2 - platforms rotate: blocks flip over now and then; golden rings between them
+    var prev = begin(S_ROTATE).plats[0], z0 = z;
+    [-0.3, 0.3, -0.2, 0.35, -0.3, 0.2].forEach(function (x, j) {
+      var rs = step(S_ROTATE, [{ x: x, style: SEQ[(j + 1) % 6], kind: "rotate", period: 2600 - j * 80, flip: 900, t: 400 + j * 650 }]);
+      if (j > 0) ringBetween(prev, rs.plats[0]);
+      prev = rs.plats[0];
     });
+    landmark("tower", 4.6 * AR.tower, 4.6, -2.6, (z0 + z) / 2, 3.3);
 
-    // 3 - moving platforms slide from side to side
-    stageStart.push(steps.length);
-    step(2, [{ style: "rainbow" }]);
-    for (var m = 0; m < 5; m++) {
-      var ms = step(2, [{ x: 0, style: SEQ[(m + 2) % 6], kind: "move", amp: 0.85, period: 2600 + m * 160, phase: rand() * 6.28 }]);
-      if (m % 2 === 0) coin(ms.plats[0]);
+    // 3 - dodge the cloud on the rainbow road (the cloud itself is driven by updateCloud)
+    begin(S_CLOUD);
+    for (var r2 = 0; r2 < 7; r2++) {
+      var rs2 = step(S_CLOUD, [{ x: -LANE, style: "rainbow", kind: "road" }, { x: LANE, style: "rainbow", kind: "road" }]);
+      if (r2 % 2 === 0) coin(rs2.plats[either()]);
     }
 
     // 4 - fake platforms in the dark: each pair has a cracked twin that crumbles
-    stageStart.push(steps.length);
-    step(3, [{ style: "stone" }]);
-    for (var f = 0; f < 5; f++) {
+    begin(S_FAKE);
+    for (var f = 0; f < 6; f++) {
       var fk = either(), fd = [];
       fd[fk] = { x: fk ? LANE : -LANE, style: "stonefake", kind: "fake" };
       fd[1 - fk] = { x: fk ? -LANE : LANE, style: "stone" };
-      var fs = step(3, fd);
-      if (f === 0) coin(fs.plats[1 - fk]);
+      var fs = step(S_FAKE, fd);
+      if (f === 0 || f === 4) coin(fs.plats[1 - fk]);
       if (f === 1 || f === 3) gem(fs.plats[1 - fk], f === 1 ? "gem_purple" : "gem_blue");
-      if (f === 4) coin(fs.plats[1 - fk]);
     }
     var fakeEnd = z;
 
-    // 5 - dodge the cloud on the rainbow road
-    stageStart.push(steps.length);
-    step(4, [{ style: "rainbow" }]);
-    for (var r2 = 0; r2 < 6; r2++) {
-      var rs = step(4, [{ x: -LANE, style: "rainbow", kind: "road" }, { x: LANE, style: "rainbow", kind: "road" }]);
-      if (r2 % 2 === 0) coin(rs.plats[either()]);
-    }
+    // 5 - the secret rainbow route: the path goes on, a hidden rainbow road curves away to the left
+    begin(S_SECRET);
+    var mainX = [0.25, -0.2, 0.3, -0.15, 0.25, 0], secX = [-1.2, -1.55, -1.75, -1.7, -1.45, -1.05];
+    var prevSec = null;
+    mainX.forEach(function (x, j) {
+      var ss = step(S_SECRET, [{ x: x, style: SEQ[(j + 3) % 6] },
+        { x: secX[j], style: "rainbow", kind: "secret", route: "secret", entry: j === 0 }]);
+      if (j === 1 || j === 4) coin(ss.plats[0]);
+      var sec = ss.plats[1];
+      if (prevSec) ringBetween(prevSec, sec, 1.15);
+      if (j === 1 || j === 3) gem(sec, j === 1 ? "gem_blue" : "gem_purple");
+      if (j === 2 || j === 5) coin(sec);
+      prevSec = sec;
+    });
 
-    // 6 - choose your path: safe ice blocks on the left, gold with more rewards (and traps) on the right
-    stageStart.push(steps.length);
-    step(5, [{ style: "rainbow" }]);
-    var e1 = step(5, [{ x: -1.0, style: "ice", route: "safe", entry: true }, { x: 1.0, style: "gold", route: "gold", entry: true }]);
-    var e2 = step(5, [{ x: -1.05, style: "ice", route: "safe" }, { x: 1.0, style: "gold", route: "gold", kind: "move", amp: 0.42, period: 2300, phase: 0 }]);
+    // 6 - moving platforms: they slide from side to side, lift up and down, or flip over
+    prev = begin(S_MOVE).plats[0];
+    ["slide", "slide", "lift", "slide", "flip", "lift", "slide", "flip", "slide"].forEach(function (kind, j) {
+      var col = SEQ[(j + 2) % 6], d;
+      if (kind === "slide") d = { x: 0, style: col, kind: "move", amp: 0.85, period: 2500 + j * 120, phase: rand() * 6.28 };
+      if (kind === "lift") d = { x: j % 2 ? 0.25 : -0.25, style: col, kind: "lift", amp: 0.55, period: 2200 + j * 100, phase: rand() * 6.28 };
+      if (kind === "flip") d = { x: j % 2 ? 0.3 : -0.3, style: col, kind: "rotate", period: 2300, flip: 800, t: j * 500 };
+      var ms = step(S_MOVE, [d]);
+      if (j % 2 === 0) coin(ms.plats[0]);
+      if (j === 3 || j === 7) ringBetween(prev, ms.plats[0]);
+      prev = ms.plats[0];
+    });
+
+    // 7 - choose your path: safe ice blocks on the left, gold with more rewards (and traps) on the right
+    begin(S_PATH);
+    var e1 = step(S_PATH, [{ x: -1.0, style: "ice", route: "safe", entry: true }, { x: 1.0, style: "gold", route: "gold", entry: true }]);
+    var e2 = step(S_PATH, [{ x: -1.05, style: "ice", route: "safe" }, { x: 1.0, style: "gold", route: "gold", kind: "move", amp: 0.42, period: 2300, phase: 0 }]);
     var gf = either();
-    var e3 = step(5, [{ x: -1.0, style: "ice", route: "safe" },
+    var e3 = step(S_PATH, [{ x: -1.0, style: "ice", route: "safe" },
       { x: 0.55, style: gf ? "gold" : "goldfake", kind: gf ? "plain" : "fake", route: "gold" },
       { x: 1.45, style: gf ? "goldfake" : "gold", kind: gf ? "fake" : "plain", route: "gold" }]);
-    var e4 = step(5, [{ x: -1.0, style: "ice", route: "safe" }, { x: 1.0, style: "gold", route: "gold" }]);
-    [e1, e2, e3, e4].forEach(function (s) { coin(s.plats[0]); });
+    var e4 = step(S_PATH, [{ x: -1.0, style: "ice", route: "safe" }, { x: 1.0, style: "gold", route: "gold" }]);
+    [e1, e2, e3, e4].forEach(function (es) { coin(es.plats[0]); });
     gem(e1.plats[1], "gem_purple");
     coin(e2.plats[1]);
     gem(e3.plats[gf ? 1 : 2], "gem_blue");
@@ -300,15 +312,15 @@
     addPick("coin", 1.0, 1.1, (e1.z + e2.z) / 2);
     addPick("coin", 1.0, 1.1, (e2.z + e3.z) / 2);
     addPick("coin", 1.0, 1.1, (e3.z + e4.z) / 2);
-    step(5, [{ style: "rainbow" }]);
+    step(S_PATH, [{ style: "rainbow" }]);
 
-    // 7 - the rainbow road to the gate
-    stageStart.push(steps.length);
-    step(6, [{ style: "rainbow" }]);
-    coin(step(6, [{ x: 0.25, style: "rainbow" }]).plats[0]);
-    coin(step(6, [{ x: -0.2, style: "rainbow" }]).plats[0]);
-    var endStep = step(6, [{ x: 0, style: "rainbow", kind: "end" }]);
-    stageStart.push(steps.length);                      // sentinel: one past the last stage
+    // 8 - the rainbow road to the gate
+    begin(S_GATE);
+    coin(step(S_GATE, [{ x: 0.25, style: "rainbow" }]).plats[0]);
+    coin(step(S_GATE, [{ x: -0.2, style: "rainbow" }]).plats[0]);
+    coin(step(S_GATE, [{ x: 0.15, style: "rainbow" }]).plats[0]);
+    var endStep = step(S_GATE, [{ x: 0, style: "rainbow", kind: "end" }]);
+    stageStart.push(steps.length);                      // sentinel: one past the last section
     var endP = endStep.plats[0];
     gate = billboard("gate", 2.75 * 866 / 1100, 2.75, "gate");
     gate.x = 0; gate.z = endP.z + 2.4;
@@ -318,10 +330,10 @@
     });
 
     // who can jump to whom: same route, the main path, or into a branch at its entrance
-    steps.forEach(function (s, si) {
+    steps.forEach(function (st, si) {
       var nx = steps[si + 1];
       if (!nx) return;
-      s.plats.forEach(function (p) {
+      st.plats.forEach(function (p) {
         var sameRoute = nx.plats.some(function (q2) { return q2.route === p.route; });
         p.next = nx.plats.filter(function (q2) {
           return q2.route === p.route || (q2.route === "main" && !sameRoute) || (p.route === "main" && q2.entry);
@@ -329,28 +341,45 @@
       });
     });
 
-    // scenery: floating islands drifting past on both sides
-    for (var sz = -4, side = 1; sz < gate.z + 8; sz += 2.6 + rand() * 1.4, side = -side) {
+    // scenery: floating castle islands drifting past on both sides, some with rainbow waterfalls
+    // pouring from them and crystals hovering nearby
+    for (var sz = -4, side = 1; sz < gate.z + 8; sz += 2.4 + rand() * 1.4, side = -side) {
       var n = Math.floor(rand() * ISLANDS.length), h = 1.3 + rand() * 1.7;
-      var isl = billboard("island_" + (n + 1), h * ISLANDS[n], h, "island");
-      isl.x = side * (2.5 + rand() * 2.6) + (side > 0 ? 0.6 : 0);
-      isl.y = -2.1 + rand() * 2.6;
-      isl.z = sz;
-      isl.phase = rand() * 6.28;
-      scenery.push(isl);
+      var ix = side * (2.5 + rand() * 2.6) + (side > 0 ? 0.6 : 0), iy = -2.1 + rand() * 2.6;
+      landmark("island_" + (n + 1), h * ISLANDS[n], h, iy, sz, ix);
+      if (rand() < 0.45) landmark("waterfall", h * 0.9 * AR.waterfall, h * 0.9, iy - h * 0.55, sz + 0.05, ix + side * 0.05);
+      if (rand() < 0.4) {
+        var gk = rand() < 0.5 ? "gem_purple" : "gem_blue", gh = 0.45 + rand() * 0.35;
+        var cr = landmark(gk, gh * AR[gk], gh, iy + h * (0.5 + rand() * 0.6), sz - 0.3, ix - side * (h * 0.45 + 0.4));
+        cr.spin = true;
+      }
     }
 
     orb = billboard("laser_orb", 1.1, 1.1, "orb");
     orb.x = 1.7; orb.z = fakeEnd - 0.5;
     cloud = billboard("cloud_monster", 1.9, 1.9 / 1.181, "monster");
-    Object.assign(cloud, { alpha: 0, x: 0.4, y: 1.6, z: 0, target: null, struck: false, tWarn: 0, tStrike: 0, next: 0 });
+    Object.assign(cloud, { alpha: 0, x: 0.4, y: 1.6, z: 0, d: 3.8, on: false, intro: false, target: null, struck: false,
+      tWarn: 0, tStrike: 0, next: 0, warned: 0 });
     warnMark = billboard("icon_warning", 0.32, 0.32 / 1.127, "warnMark");
     shadowEl = el("div", "shadow");
     marker = el("div", "marker");
     el("div", "arrowShape", marker);
     var start = steps[0].plats[0];
-    boy = { x: start.x, y: 0, z: start.z + STAND, on: start, air: false, flip: false, landT: -1e9, alpha: 1, sprite: "jump" };
-    boy.bb = billboard("boy_jump", BOY_H * BOY_AR.jump, BOY_H, "boy");
+    boy = { x: start.x, y: 0, z: start.z + STAND, on: start, air: false, landT: -1e9, alpha: 1, lean: 0, frame: 0, tuck: 0 };
+    boy.bb = billboard("boy_legs", BOY_W, BOY_H, "boy");
+    boy.legs = boy.bb.img;
+    boy.torso = el("img", "", boy.bb.el);
+    boy.torso.src = A + "boy_torso.webp";
+    boy.torso.alt = "";
+    boy.legs.style.transformOrigin = RIG.hipX * 100 + "% " + RIG.beltY * 100 + "%";
+  }
+
+  // a piece of scenery: w x h world units, its bottom centre at (x, y, z)
+  function landmark(src, w, h, y, z, x) {
+    var b = billboard(src, w, h, "scenery");
+    Object.assign(b, { x: x, y: y, z: z, phase: rand() * 6.28 });
+    scenery.push(b);
+    return b;
   }
 
   function addPick(kind, x, y, z, plat) {
@@ -408,6 +437,7 @@
   }
   function flatAt(p, t) { var r = rollAt(p, t); return r < 24 || r > 336; }
   function moveX(p, t) { return p.bx + p.amp * Math.sin(t / p.period * 6.2832 + p.phase); }
+  function liftY(p, t) { return p.amp * Math.sin(t / p.period * 6.2832 + p.phase); }
 
   function updateWorld(dt) {
     plats.forEach(function (p) {
@@ -416,24 +446,31 @@
         p.roll = rollAt(p, p.t);
       } else if (p.kind === "move") {
         p.x = moveX(p, clock);
+      } else if (p.kind === "lift") {
+        p.ly = liftY(p, clock);
       }
     });
     if (boy.on && !boy.air && boy.on.kind === "move") boy.x = boy.on.x;      // he rides it
-    picks.forEach(function (pk) { if (pk.plat) pk.x = pk.plat.x + pk.ox; });
-    updateCloud();
+    picks.forEach(function (pk) { if (pk.plat) { pk.x = pk.plat.x + pk.ox; pk.ly = pk.plat.ly; } });
+    updateCloud(dt);
   }
 
+  function groundY() { return boy.on && !boy.air ? boy.on.ly : 0; }
+
   function jumpTo(X, Z, peak, dur, done) {
-    var x0 = boy.x, z0 = boy.z, y0 = boy.y;
-    if (X < x0 - 0.2) boy.flip = true; else if (X > x0 + 0.2) boy.flip = false;
+    var x0 = boy.x, z0 = boy.z, y0 = boy.y + groundY();
+    var lean = Math.max(-11, Math.min(11, (X - x0) * 16));          // he leans into a sideways hop
     boy.air = true;
     boy.on = null;
+    boy.frame = 1 - boy.frame;                                        // push off with the other leg
     tween(dur, function (k) {
       var e = easeIO(k);
       boy.x = x0 + (X - x0) * e;
       boy.z = z0 + (Z - z0) * e;
       boy.y = y0 * (1 - k) + peak * 4 * k * (1 - k);
-    }, function () { boy.air = false; boy.y = 0; boy.landT = clock; if (done) done(); });
+      boy.lean = lean * Math.sin(k * Math.PI);
+      boy.tuck = Math.sin(k * Math.PI);
+    }, function () { boy.air = false; boy.y = 0; boy.lean = 0; boy.tuck = 0; boy.landT = clock; if (done) done(); });
   }
 
   function choose(p) {
@@ -451,6 +488,7 @@
     if (p.kind === "fake") { crumble(p); return fall(from, "It was a fake!"); }
     if (p.kind === "rotate" && !flatAt(p, p.t)) return fall(from, "It flipped over!");
     if (p.kind === "move" && Math.abs(p.x - boy.x) > 0.44) return fall(from, "Missed it!");
+    if (p.kind === "lift" && Math.abs(p.ly) > 0.2) return fall(from, "Missed it!");
     land(p);
     if (cloud.struck && cloud.target === p) zap();
   }
@@ -459,28 +497,27 @@
     boy.on = p;
     boy.x = p.kind === "move" ? p.x : boy.x;
     if (p.kind === "rotate") p.t = 0;                   // it waits, flat, while he stands on it
-    burst(p.x, 0.05, p.z, HEX[p.style] || "#fff", 14);
+    burst(p.x, 0.05 + p.ly, p.z, HEX[p.style] || "#fff", 14);
     p.flash = 1;
     vibrate(15);
     if (p.step === stageStart[p.stage] && p.route === "main") checkpoint = p;
     if (p.stage !== stage) enterStage(p.stage);
-    if (p.kind === "secret") {
-      setSprite("run");
+    if (p.kind === "secret") {                           // the secret route carries him along
       if (p.entry && !secretFound) {
         secretFound = true;
-        pop(project(p.x, 1.2, p.z).x, project(p.x, 1.2, p.z).y, "Secret route!");
-        say(SECRET.say, "win");
+        var s = project(p.x, 1.2, p.z);
+        pop(s.x, s.y, "Secret route!");
+        say("You found the <b>secret rainbow route!</b>", "win");
         vibrate([20, 40, 20]);
       }
       mode = "busy";
       var nx = p.next.filter(function (x) { return x.route === "secret"; })[0] || p.next[0];
-      wait(220, function () {
-        jumpTo(nx.x, nx.z + STAND, 0.75, 460, function () { if (nx.kind !== "secret") { setSprite("jump"); stageSay(); } resolve(nx, p); });
+      wait(200, function () {
+        jumpTo(nx.x, nx.z + STAND, 0.75, 440, function () { resolve(nx, p); });
       });
       updateHud();
       return;
     }
-    setSprite("jump");
     updateHud();
     if (p.kind === "end") {
       mode = "gate";
@@ -522,7 +559,8 @@
     var y0 = boy.y;
     boy.on = null;
     boy.air = true;
-    tween(700, function (k) { boy.y = y0 - 3.4 * k * k; boy.alpha = 1 - k; }, function () {
+    tween(700, function (k) { boy.y = y0 - 3.4 * k * k; boy.alpha = 1 - k; boy.tuck = 1; }, function () {
+      boy.tuck = 0;
       loseHeart();
       if (hearts <= 0) return outOfHearts();
       respawn(from);
@@ -530,7 +568,7 @@
   }
 
   function respawn(p) {
-    boy.x = p.x; boy.z = p.z + STAND; boy.y = 0; boy.air = false; boy.on = p; boy.landT = clock;
+    boy.x = p.x; boy.z = p.z + STAND; boy.y = 0; boy.air = false; boy.on = p; boy.landT = clock; boy.lean = 0;
     if (p.kind === "rotate") p.t = 0;
     tween(700, function (k) { boy.alpha = Math.round(k * 6) % 2 ? 0.35 : 1; }, function () { boy.alpha = 1; });
     mode = "play";
@@ -546,7 +584,7 @@
   function zap() {
     vibrate([60, 40, 60]);
     loseHeart();
-    say("Zapped! <small>Keep off the flashing block.</small>", "warn", 2200);
+    say("Zapped! <small>Keep moving and stay off the flashing block.</small>", "warn", 2200);
     var s = project(boy.x, 1, boy.z);
     pop(s.x, s.y, "⚡", "bad");
     tween(500, function (k) { boy.alpha = Math.round(k * 8) % 2 ? 0.4 : 1; }, function () { boy.alpha = 1; });
@@ -565,7 +603,7 @@
     updateHearts(false);
     var p = checkpoint || steps[0].plats[0];
     respawn(p);
-    cloud.target = null; cloud.struck = false; cloud.next = clock + 1500;
+    cloud.target = null; cloud.struck = false; cloud.next = clock + 1500; cloud.d = 3.8;
     stageSay();
   }
 
@@ -585,22 +623,55 @@
     });
   }
 
-  // ---- the cloud monster (stage 5) --------------------------------------------------------------
-  function inCloudStage() { return boy.on ? boy.on.stage === 4 : stage === 4; }
-
-  function updateCloud() {
-    var active = stage === 4 && mode !== "done" && mode !== "over";
-    cloud.alpha += ((active ? 1 : 0) - cloud.alpha) * (active ? 0.05 : 0.12);
-    cloud.x = cam.x * 0.35 + 0.1 + Math.sin(clock / 900) * 0.25;
-    cloud.y = 0.95 + Math.sin(clock / 500) * 0.08 + (1 - cloud.alpha) * 1.5;
-    cloud.z = boy.z + 3.5;
-    if (!active) { cloud.target = null; cloud.struck = false; return; }
-    if (!cloud.target && clock > cloud.next && boy.on && inCloudStage()) {
-      var here = boy.on;
-      var cands = here.next.filter(function (p) { return !p.gone && p.kind === "road"; });
-      if (clock - boy.landT > 2000 && here.kind === "road") cloud.target = here;     // it chases you
-      else if (cands.length) cloud.target = cands[Math.floor(rand() * cands.length)];
-      if (cloud.target) cloud.tWarn = clock;
+  // ---- the cloud monster (section 3) --------------------------------------------------------------
+  // It swoops in over the boy's head, then stays ahead of him on the road, following his lane.
+  // Whenever he stands still it closes in (d shrinks) and, when it reaches him, strikes his block;
+  // meanwhile it keeps flashing and striking the blocks ahead.
+  function updateCloud(dt) {
+    var active = stage === S_CLOUD && mode !== "done" && mode !== "over";
+    if (active && !cloud.on) {
+      cloud.on = true;
+      cloud.intro = true;
+      cloud.d = -1.6;                                   // starts behind him, over the camera
+      cloud.x = boy.x;
+      cloud.next = clock + 2200;
+    }
+    if (!active) {
+      cloud.on = false;
+      cloud.alpha += (0 - cloud.alpha) * 0.12;
+      cloud.target = null; cloud.struck = false;
+      return;
+    }
+    cloud.alpha += (1 - cloud.alpha) * 0.08;
+    var still = mode === "play" && !boy.air;
+    if (cloud.intro) {
+      cloud.d += (3.8 - cloud.d) * 0.035;
+      if (cloud.d > 3.5) cloud.intro = false;
+    } else if (still) {
+      cloud.d -= dt / 1000 * 0.75;                      // it's catching up
+    } else {
+      cloud.d += (3.8 - cloud.d) * 0.04;
+    }
+    cloud.x += (boy.x * 0.85 + 0.15 - cloud.x) * 0.06;   // it follows his lane
+    cloud.z = boy.z + cloud.d;
+    var close = Math.max(0, 2.6 - cloud.d);
+    cloud.y = 0.95 + Math.sin(clock / 500) * 0.08 + (cloud.intro ? Math.max(0, 3.6 - cloud.d) * 0.3 : -close * 0.25);
+    cloud.img.style.filter = close > 0 ? "drop-shadow(0 0 " + (close * 18) + "px rgba(255,40,80,0.9))" : "";
+    if (close > 0 && clock - cloud.warned > 2500 && mode === "play") {
+      cloud.warned = clock;
+      say("It's catching up! <small>Keep moving!</small>", "warn", 1500);
+    }
+    if (!cloud.intro && cloud.d < 1.6 && boy.on && !boy.air && mode === "play") {   // it caught him
+      bolt(boy.on);
+      zap();
+      cloud.d = 3.8;
+      cloud.target = null; cloud.struck = false; cloud.next = clock + 1200;
+      return;
+    }
+    if (cloud.intro) return;
+    if (!cloud.target && clock > cloud.next && boy.on && boy.on.stage === S_CLOUD) {
+      var cands = boy.on.next.filter(function (p) { return !p.gone && p.kind === "road"; });
+      if (cands.length) { cloud.target = cands[Math.floor(rand() * cands.length)]; cloud.tWarn = clock; }
     }
     if (cloud.target && !cloud.struck && clock - cloud.tWarn > WARN_MS) {
       cloud.struck = true;
@@ -640,12 +711,13 @@
 
   // ---- pickups and rings -----------------------------------------------------------------------
   function checkPicks() {
-    var cy = boy.y + BOY_H / 2;
+    var by = boy.y + groundY(), cy = by + BOY_H / 2;
     picks.forEach(function (p) {
       if (p.got || boy.alpha < 0.5) return;
-      if (Math.abs(p.x - boy.x) < 0.42 && Math.abs(p.z - boy.z) < 0.4 && p.y > boy.y - 0.1 && p.y < boy.y + BOY_H + 0.15) {
+      var py = p.y + (p.ly || 0);
+      if (Math.abs(p.x - boy.x) < 0.42 && Math.abs(p.z - boy.z) < 0.4 && py > by - 0.1 && py < by + BOY_H + 0.15) {
         p.got = true;
-        var s = project(p.x, p.y + p.h / 2, p.z);
+        var s = project(p.x, py + p.h / 2, p.z);
         p.el.remove();
         var isCoin = p.kind === "coin";
         if (isCoin) { coinsGot++; profile.coins += COIN_VALUE; } else { gemsGot++; profile.gems += GEM_VALUE; }
@@ -653,7 +725,7 @@
           bump(isCoin ? "coins" : "gems", isCoin ? profile.coins : profile.gems);
         });
         pop(s.x, s.y - 30 * L.u, isCoin ? "+" + COIN_VALUE : "+" + GEM_VALUE);
-        burst(p.x, p.y, p.z, isCoin ? "#ffd84a" : "#e27bff", 8);
+        burst(p.x, py, p.z, isCoin ? "#ffd84a" : "#e27bff", 8);
       }
     });
     rings.forEach(function (r) {
@@ -731,14 +803,7 @@
 
   function chip(color) { return '<span class="c" style="background:' + HEX[color] + '">' + NAMES[color] + "</span>"; }
 
-  function setSprite(kind) {
-    if (boy.sprite === kind) return;
-    boy.sprite = kind;
-    boy.bb.img.src = A + (kind === "run" ? "boy_run" : "boy_jump") + ".webp";
-    boy.bb.w = BOY_H * BOY_AR[kind];
-  }
-
-  // ---- banner, stage panel, hearts, journey --------------------------------------------------------
+  // ---- banner, section panel, hearts, journey -------------------------------------------------------
   function say(text, cls, ms) {
     var b = $("banner");
     $("bannerText").innerHTML = Array.isArray(text) ? text[0] + "<small>" + text[1] + "</small>" : text;
@@ -764,7 +829,6 @@
     stage = i;
     var st = STAGES[i];
     screen.classList.toggle("dark", !!st.dark);
-    if (i === 4) cloud.next = clock + 1800;          // the cloud swoops in before its first strike
     $("seqTitle").textContent = st.title;
     $("seqOrbs").hidden = i !== 0;
     $("pips").hidden = i === 0;
@@ -773,7 +837,7 @@
       var pop2 = $("stagePop"), ic = $("stagePopIcon");
       ic.hidden = !st.icon;
       if (st.icon) ic.src = A + st.icon + ".webp";
-      $("stagePopTitle").innerHTML = '<div class="stageNo">STAGE ' + (i + 1) + " OF " + STAGES.length + "</div>" + st.title;
+      $("stagePopTitle").innerHTML = '<div class="stageNo">SECTION ' + (i + 1) + " OF " + STAGES.length + "</div>" + st.title;
       $("stagePopTip").textContent = st.tip;
       pop2.classList.add("show");
       setTimeout(function () { pop2.classList.remove("show"); }, 1700);
@@ -862,20 +926,22 @@
     if (!boy) return;
     var u = L.u, k = L.k;
 
-    // idle bounce on the jelly (the boy never quite stands still)
-    var contact = 0;
+    // on a block he jogs on the spot, legs swapping; in the air his legs tuck
+    var contact = 0, bob = 0;
     if (!boy.air && mode !== "done") {
-      var ph = ((clock - boy.landT) / 640) % 1;
-      boy.y = 0.055 * 4 * ph * (1 - ph);
+      var ph = ((clock - boy.landT) / 380) % 1;
+      boy.frame = Math.floor((clock - boy.landT) / 190) % 2;
+      bob = 0.02 * Math.sin(ph * Math.PI * 2);
+      boy.y = 0;
       contact = Math.max(0, 1 - Math.min(ph, 1 - ph) / 0.12);
     }
     var sinceLand = clock - boy.landT;
-    var squash = Math.max(contact * 0.5, sinceLand < 260 ? Math.exp(-sinceLand / 90) : 0);
+    var squash = Math.max(contact * 0.25, sinceLand < 260 ? Math.exp(-sinceLand / 90) : 0);
 
     world.style.transform = "translate3d(" + (L.ax + VX * u - k * cam.x) + "px," + (L.ay + VY * u + k * CAM_Y) + "px," + (F * u + k * cam.z) + "px)";
 
     // backdrop: slow zoom toward the vanishing point as the boy advances, slight side parallax
-    var zb = 1 + 0.004 * Math.max(0, boy.z), sx = -(cam.x - X_BASE) * 22 * u;
+    var zb = 1 + 0.003 * Math.max(0, boy.z), sx = -(cam.x - X_BASE) * 22 * u;
     var ox = VX * u, oy = (EXT_T + VY) * u;
     $("bg").style.transform = "translate(" + (ox * (1 - zb) + sx) + "px," + (oy * (1 - zb)) + "px) scale(" + zb + ")";
 
@@ -890,12 +956,12 @@
       p.el.style.display = "";
       var dip = p === boy.on ? -0.025 * squash : 0;
       if (p === tgt) dip += 0.035 * (1 + Math.sin(clock / 150));
-      var tf = t3(p.x + p.dx, dip + p.dy, p.z);
+      var tf = t3(p.x + p.dx, dip + p.dy + p.ly, p.z);
       if (p.roll) tf += " translate3d(0," + (BLOCK.h / 2 * k) + "px,0) rotateZ(" + p.roll + "deg) translate3d(0," + (-BLOCK.h / 2 * k) + "px,0)";
       p.el.style.transform = tf;
       var warned = cloud.target === p;
       var glow = p.red || (warned ? 0.55 + 0.45 * Math.sin(clock / 60) : 0) || (p === tgt ? 0.6 + 0.4 * Math.sin(clock / 150) : 0) ||
-        (p.entry && p.route === "secret" && !secretFound ? 0.3 + 0.3 * Math.sin(clock / 240) : 0) || p.flash;
+        (p.entry && p.route === "secret" && !secretFound ? 0.35 + 0.3 * Math.sin(clock / 240) : 0) || p.flash;
       if (p.flash > 0) p.flash = Math.max(0, p.flash - 0.04);
       p.glowEl.style.opacity = glow;
       p.glowEl.classList.toggle("red", !!p.red || warned);
@@ -910,7 +976,7 @@
       p.el.style.display = vis > 0 ? "" : "none";
       if (vis <= 0) return;
       p.img.style.opacity = vis;
-      placeBB(p, p.x, p.y + Math.sin(clock / 380 + p.phase) * 0.04, p.z);
+      placeBB(p, p.x, p.y + (p.ly || 0) + Math.sin(clock / 380 + p.phase) * 0.04, p.z);
       p.img.style.transform = p.kind === "coin" ? "rotateY(" + ((clock / 6 + p.phase * 57) % 360) + "deg)" : "rotateY(" + Math.sin(clock / 700 + p.phase) * 25 + "deg)";
     });
     rings.forEach(function (r) {
@@ -928,6 +994,7 @@
       if (vis <= 0) return;
       s.img.style.opacity = vis;
       placeBB(s, s.x, s.y + Math.sin(clock / 1500 + s.phase) * 0.08, s.z);
+      if (s.spin) s.img.style.transform = "rotateY(" + Math.sin(clock / 900 + s.phase) * 40 + "deg)";
     });
 
     // the gate: far away all level long, glowing once he reaches the last block
@@ -935,7 +1002,7 @@
     gate.img.style.filter = mode === "gate" ? "brightness(" + (1.08 + 0.12 * Math.sin(clock / 220)) + ") saturate(1.15)" : "";
     // laser orb over the dark zone, cloud monster over the rainbow road
     var oz = orb.z - cam.z;
-    orb.el.style.display = oz > 2.5 && oz < 34 && (stage === 2 || stage === 3) ? "" : "none";
+    orb.el.style.display = oz > 2.5 && oz < 34 && (stage === S_CLOUD || stage === S_FAKE) ? "" : "none";
     placeBB(orb, orb.x, 1.9 + Math.sin(clock / 700) * 0.1, orb.z, " scale(" + (1 + 0.05 * Math.sin(clock / 180)) + ")");
     cloud.el.style.display = cloud.alpha > 0.02 ? "" : "none";
     cloud.img.style.opacity = cloud.alpha;
@@ -944,10 +1011,13 @@
     warnMark.el.style.display = wt ? "" : "none";
     if (wt) placeBB(warnMark, wt.x, 0.3 + 0.05 * Math.sin(clock / 90), wt.z);
 
-    // the boy (a billboard) and his shadow on the block under him
-    var sy = 1 - 0.1 * squash, sxx = (1 + 0.07 * squash) * (boy.flip ? -1 : 1);
+    // the boy, seen from behind: legs swap each stride, tuck in the air, lean into sideways hops
+    var gy = groundY();
     boy.bb.img.style.opacity = boy.alpha;
-    placeBB(boy.bb, boy.x, boy.y, boy.z, " scale(" + sxx + "," + sy + ")");
+    boy.torso.style.opacity = boy.alpha;
+    boy.legs.style.transform = "scaleX(" + (boy.frame ? -1 : 1) + ") scaleY(" + (1 - 0.1 * boy.tuck) + ")";
+    boy.torso.style.transform = "translateY(" + (-bob * k) + "px)";
+    placeBB(boy.bb, boy.x, boy.y + gy, boy.z, " rotateZ(" + boy.lean + "deg) scale(" + (1 + 0.06 * squash) + "," + (1 - 0.08 * squash) + ")");
     boy.bb.el.style.transformOrigin = "50% 100%";
     var under = null;
     if (boy.alpha > 0.5) plats.forEach(function (p) {
@@ -955,8 +1025,8 @@
     });
     shadowEl.style.display = under ? "" : "none";
     if (under) {
-      var hs = Math.max(0.35, 1 - boy.y * 0.6);
-      shadowEl.style.transform = t3(boy.x - 0.24 * hs, 0.012 + under.dy, boy.z + 0.12 * hs) + " rotateX(90deg) scale(" + hs + ")";
+      var hs = Math.max(0.35, 1 - (boy.y + gy - under.ly) * 0.6);
+      shadowEl.style.transform = t3(boy.x - 0.24 * hs, 0.012 + under.dy + under.ly, boy.z + 0.12 * hs) + " rotateX(90deg) scale(" + hs + ")";
       shadowEl.style.opacity = hs;
     }
 
@@ -964,7 +1034,7 @@
     marker.style.display = tgt ? "" : "none";
     if (tgt) {
       marker.style.setProperty("--c", HEX[tgt.style] || "#fff");
-      marker.style.transform = t3(tgt.x - 0.1, 0.3 + tgt.dy + 0.06 * Math.abs(Math.sin(clock / 260)), tgt.z);
+      marker.style.transform = t3(tgt.x - 0.1, 0.3 + tgt.dy + tgt.ly + 0.06 * Math.abs(Math.sin(clock / 260)), tgt.z);
     }
 
     var ts = fmtTime(elapsed);
@@ -991,9 +1061,9 @@
   // ---- input ---------------------------------------------------------------------------------
   function tileHit(p, cx, cy) {
     var pts = [[-1, 1], [1, 1], [1, -1], [-1, -1]].map(function (c) {
-      return project(p.x + c[0] * BLOCK.w / 2, 0, p.z + c[1] * BLOCK.d / 2);
+      return project(p.x + c[0] * BLOCK.w / 2, p.ly, p.z + c[1] * BLOCK.d / 2);
     });
-    pts.push(project(p.x - BLOCK.w / 2, -0.3, p.z - BLOCK.d / 2), project(p.x + BLOCK.w / 2, -0.3, p.z - BLOCK.d / 2));
+    pts.push(project(p.x - BLOCK.w / 2, p.ly - 0.3, p.z - BLOCK.d / 2), project(p.x + BLOCK.w / 2, p.ly - 0.3, p.z - BLOCK.d / 2));
     var x0 = Math.min.apply(null, pts.map(function (v) { return v.x; })), x1 = Math.max.apply(null, pts.map(function (v) { return v.x; }));
     var y0 = Math.min.apply(null, pts.map(function (v) { return v.y; })), y1 = Math.max.apply(null, pts.map(function (v) { return v.y; }));
     var dx = Math.max(x0 - cx, 0, cx - x1), dy = Math.max(y0 - cy - 60 * L.u, 0, cy - y1);   // a little extra above
@@ -1120,10 +1190,10 @@
 
   // ---- start ---------------------------------------------------------------------------------
   function preload() {
-    var files = ["boy_jump", "boy_run", "gate", "coin", "gem_purple", "gem_blue", "ring", "top_glow", "complete_card",
+    var files = ["boy_torso", "boy_legs", "gate", "coin", "gem_purple", "gem_blue", "ring", "top_glow", "complete_card",
       "star_1", "star_2", "star_3", "btn_next", "cloud_monster", "laser_orb", "icon_warning", "icon_rotate", "icon_up",
-      "icon_fake", "icon_left", "icon_right", "island_1", "island_2", "island_3", "island_4", "island_5"];
-    SEQ.forEach(function (c) { files.push("top_" + c, "front_" + c, "side_" + c, "orb_" + c); });
+      "icon_fake", "icon_left", "icon_right", "island_1", "island_2", "island_3", "island_4", "island_5", "waterfall", "tower"];
+    SEQ.forEach(function (c) { files.push("top_" + c, "front_" + c, "side_" + c, "bottom_" + c, "orb_" + c); });
     ["rainbow", "stone", "stonefake", "gold", "goldfake", "ice"].forEach(function (c) { files.push("top_" + c, "front_" + c, "side_" + c); });
     return Promise.all(files.map(function (f) {
       return new Promise(function (res) { var i = new Image(); i.onload = i.onerror = res; i.src = A + f + ".webp"; });
@@ -1149,16 +1219,18 @@
     requestAnimationFrame(tick);
   }
 
-  function screenOf(p) { return project(p.x, 0, p.z); }
+  function screenOf(p) { return project(p.x, p.ly, p.z); }
 
   // Test / preview hooks (used by scripts/level1_preview.mjs).
   window.RCLevel1 = {
+    sections: STAGES.map(function (s) { return s.title; }),
     state: function () {
-      return { mode: mode, stage: stage, step: boy.on ? boy.on.step : -1, steps: steps.length, hearts: hearts, heartsLost: heartsLost,
-        mistakes: mistakes, coins: coinsGot, gems: gemsGot, tokens: tokens, secret: secretFound, elapsed: elapsed };
+      return { mode: mode, stage: stage, step: boy.on ? boy.on.step : -1, route: boy.on ? boy.on.route : null, steps: steps.length,
+        hearts: hearts, heartsLost: heartsLost, mistakes: mistakes, coins: coinsGot, gems: gemsGot, tokens: tokens,
+        secret: secretFound, elapsed: elapsed, cloudD: cloud.on ? cloud.d : null, stageStart: stageStart };
     },
     // What a careful player would tap right now ({x, y} on screen), or null to wait.
-    // route: "safe" | "gold" at the fork, "secret" to take the secret route.
+    // route: "secret" takes the secret route when it opens, "gold" / "safe" at the fork.
     bot: function (route) {
       if (mode === "gate") return { x: L.W / 2, y: L.H * 0.45 };
       if (mode !== "play" || !boy.on) return null;
@@ -1170,7 +1242,8 @@
       if (!t) return null;
       if (t.kind === "rotate" && !(flatAt(t, t.t + JUMP_MS) && flatAt(t, t.t + JUMP_MS + 150))) return null;
       if (t.kind === "move" && Math.abs(moveX(t, clock + JUMP_MS) - (t.x + moveX(t, clock + JUMP_MS)) / 2) > 0.3) return null;
-      if (cloud.target === t || (stage === 4 && !cloud.target && clock > cloud.next - JUMP_MS - 100)) return null;
+      if (t.kind === "lift" && Math.abs(liftY(t, clock + JUMP_MS)) > 0.12) return null;
+      if (cloud.target === t || (stage === S_CLOUD && !cloud.target && clock > cloud.next - JUMP_MS - 100 && cloud.d > 2.2)) return null;
       return screenOf(t);
     },
     tapFor: function (row, i) { return screenOf(steps[row].plats[i]); },
@@ -1184,7 +1257,7 @@
       var w = boy.on.next.filter(function (p) { return p.kind === "color" && p.color !== SEQ[p.step]; })[0];
       return w ? screenOf(w) : null;
     },
-    // jump straight to the start of a stage (for screenshots)
+    // jump straight to the start of a section (for screenshots)
     goto: function (i) {
       var p = steps[stageStart[i]].plats[0];
       boy.x = p.x; boy.z = p.z + STAND; boy.y = 0; boy.air = false; boy.on = p; boy.alpha = 1;
@@ -1197,13 +1270,14 @@
       updateHud();
       hintAt = clock + 6000;
     },
-    // freeze a moment of the opening jump (like the direction image) for screenshots
+    // freeze a moment of the opening jump for screenshots
     pose: function (k) {
       var s1 = steps[1].plats.filter(function (p) { return p.color === SEQ[1]; })[0], s0 = steps[0].plats[0];
       boy.air = true; boy.on = null;
       var e = easeIO(k);
       boy.x = s0.x + (s1.x - s0.x) * e; boy.z = STAND + s1.z * e; boy.y = 0.8 * 4 * k * (1 - k);
-      boy.flip = s1.x < s0.x - 0.2;
+      boy.tuck = Math.sin(k * Math.PI);
+      boy.lean = Math.max(-11, Math.min(11, (s1.x - s0.x) * 16)) * Math.sin(k * Math.PI);
       cam.x = X_BASE + FOLLOW * s0.x; cam.z = -Z_REST;
       paused = true;
       render();
