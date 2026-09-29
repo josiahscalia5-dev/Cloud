@@ -24,13 +24,13 @@ PANELS = {2: (388, 5, 723, 562), 3: (733, 5, 1020, 562), 4: (1030, 5, 1277, 562)
 # (reference panel, game screenshot, caption) in the order the level plays
 STAGES = [
     (2, "level1_jump.png", "1  Color sequence"),
-    (3, "level1_stage2_play.png", "2  Platforms rotate"),
-    (6, "level1_secret.png", "Secret rainbow route"),
-    (7, "level1_stage3_play.png", "3  Moving platforms"),
-    (5, "level1_stage4_play.png", "4  Fake platforms"),
-    (4, "level1_stage5_play.png", "5  Dodge the cloud"),
-    (8, "level1_stage6_fork.png", "6  Choose your path"),
-    (9, "level1_stage7_play.png", "7  Rainbow Gate"),
+    (3, "level1_s2_rotate_play.png", "2  Platforms rotate"),
+    (4, "level1_s3_cloud_play.png", "3  Dodge the cloud"),
+    (5, "level1_s4_fake_play.png", "4  Fake platforms"),
+    (6, "level1_s5_secret_play.png", "5  Secret rainbow route"),
+    (7, "level1_s6_move_play.png", "6  Moving platforms"),
+    (8, "level1_s7_path_fork.png", "7  Choose your path"),
+    (9, "level1_s8_gate_play.png", "8  Rainbow Gate"),
     (10, "level1_complete.png", "Level Complete"),
 ]
 
@@ -88,7 +88,7 @@ def stages_sheet(shots, out):
     sheet = Image.new("RGBA", (W, H), BG + (255,))
     d = ImageDraw.Draw(sheet)
     d.text((W // 2, 64), "Level 1 from start to finish: your reference panels vs. the playable level", font=font(60), fill=(255, 255, 255), anchor="mm")
-    d.text((W // 2, 124), "One continuous level: 7 stages plus a secret route, played in this order from left to right, ending at the Rainbow Gate.",
+    d.text((W // 2, 124), "One continuous level: 8 sections, played in this order from left to right, ending at the Rainbow Gate.",
            font=font(32, 600), fill=(190, 205, 235), anchor="mm")
     d.text((pad, top + 20), "YOUR REFERENCE", font=font(34), fill=GOLD, anchor="lm")
     y_game = top + 60 + rh + 70

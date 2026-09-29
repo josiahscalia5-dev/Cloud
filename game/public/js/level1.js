@@ -50,6 +50,8 @@
   var F = 1560, VX = 800, VY = 380, CAM_Y = 1.85;
   var Z_REST = 3.2;                // the boy's block sits this far in front of the camera
   var X_BASE = 0.95, FOLLOW = 0.8; // camera x = X_BASE + FOLLOW * boy x (keeps both lanes in view)
+  // ...and fully once he is off to the side on a branch (secret route, safe / gold path)
+  function camTargetX(x) { return X_BASE + FOLLOW * x + (1 - FOLLOW) * (x - Math.max(-0.5, Math.min(0.5, x))); }
   var CAM_LAG = 110;               // ms: the camera eases after the boy, so his jumps read on screen
   var BLOCK = { w: 0.8, d: 0.62, h: 0.26 };
   var LANE = 0.46, ROW_DZ = 1.3;
@@ -1051,7 +1053,7 @@
       updateWorld(dt);
       checkPicks();
       var a = 1 - Math.exp(-dt / CAM_LAG);
-      cam.x += (X_BASE + FOLLOW * boy.x - cam.x) * a;
+      cam.x += (camTargetX(boy.x) - cam.x) * a;
       cam.z += (boy.z - Z_REST - cam.z) * a;
     }
     render();
@@ -1210,7 +1212,7 @@
     updateHud();
     updateHearts(false);
     hintAt = 1600;                                   // first row: show which block to jump on
-    cam.x = X_BASE + FOLLOW * boy.x;
+    cam.x = camTargetX(boy.x);
     cam.z = boy.z - Z_REST;
     layout();
     wireButtons();
@@ -1261,7 +1263,7 @@
     goto: function (i) {
       var p = steps[stageStart[i]].plats[0];
       boy.x = p.x; boy.z = p.z + STAND; boy.y = 0; boy.air = false; boy.on = p; boy.alpha = 1;
-      cam.x = X_BASE + FOLLOW * boy.x; cam.z = boy.z - Z_REST;
+      cam.x = camTargetX(boy.x); cam.z = boy.z - Z_REST;
       checkpoint = p;
       picks.forEach(function (pk) { if (pk.z < p.z - 0.5 && !pk.got) { pk.got = true; pk.el.remove(); } });
       rings.forEach(function (r) { if (r.z < p.z - 0.5 && !r.got) { r.got = true; r.el.remove(); } });
@@ -1278,7 +1280,7 @@
       boy.x = s0.x + (s1.x - s0.x) * e; boy.z = STAND + s1.z * e; boy.y = 0.8 * 4 * k * (1 - k);
       boy.tuck = Math.sin(k * Math.PI);
       boy.lean = Math.max(-11, Math.min(11, (s1.x - s0.x) * 16)) * Math.sin(k * Math.PI);
-      cam.x = X_BASE + FOLLOW * s0.x; cam.z = -Z_REST;
+      cam.x = camTargetX(s0.x); cam.z = -Z_REST;
       paused = true;
       render();
     },
