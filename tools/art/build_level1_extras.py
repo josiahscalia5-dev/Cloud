@@ -5,7 +5,8 @@
 - the cloud monster (Dodge the Cloud), the laser orb (fake-platform zone), a golden ring
 - floating islands that drift past along the path
 - the round banner icons of each stage (rotate, warning, red X, up arrow, left / right arrows)
-- the boy running on the secret rainbow route
+- the boy seen from behind, split at the waist (torso over legs) for his running animation
+- scenery: a rainbow waterfall and the rainbow tower
 
 Boxes are in reference pixels (1536 x 1024) or direction-image pixels (941 x 1672).
 """
@@ -113,11 +114,33 @@ def main(ref_path, dir_path, models, out):
             a = disc(rgb.shape, w / 2, h / 2, min(w, h) / 2 - 1.5 * S, 2 * S)
         info[name] = save_rgba(rgb, a, os.path.join(out, f"{name}.webp"), 3)
 
-    # the boy running on the rainbow (panel 6), for the secret route
-    rgb = crop("ref", (92, 784, 218, 920))
+    # the boy from behind (panel 9), split at the waist so the game can animate his stride:
+    # boy_torso (head, backpack, arms) over boy_legs (shorts, legs, shoes), same canvas
+    rgb = crop("ref", (1022, 786, 1134, 926))
     a = np.clip((get_mask_birefnet(rgb, bir) - 0.2) / 0.6, 0, 1)
     a = a * largest(a > 0.5).astype(np.float32)
-    info["boy_run"] = save_rgba(rgb, cv2.GaussianBlur(a, (0, 0), 1.2), os.path.join(out, "boy_run.webp"), 3)
+    ys, xs = np.where(a > 0.02)
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    rgb, a = rgb[y0:y1, x0:x1], a[y0:y1, x0:x1]
+    yy = np.arange(a.shape[0], dtype=np.float32)[:, None] + y0
+    belt = 355                                   # waistband, in 4x crop pixels
+    for part, m in [("boy_torso", np.clip((belt + 16 - yy) / 10 + 0.5, 0, 1)), ("boy_legs", np.clip((yy - belt + 18) / 10 + 0.5, 0, 1))]:
+        Image.fromarray(np.dstack([rgb, (a * m * 255).astype(np.uint8)])).save(os.path.join(out, part + ".webp"), quality=92, method=6)
+    hips = np.where(a[belt + 10 - y0] > 0.5)[0]
+    info["boy_rig"] = {"size": [int(x1 - x0), int(y1 - y0)], "hip_x": round(float((hips.min() + hips.max()) / 2 / (x1 - x0)), 3),
+                       "belt_y": round(float((belt - y0) / (y1 - y0)), 3)}
+
+    # scenery: a rainbow waterfall (direction image) and the rainbow tower (panel 3)
+    rgb = crop("dir", (0, 555, 300, 880))
+    a = np.clip((get_mask_birefnet(rgb, bir) - 0.25) / 0.5, 0, 1)
+    yy = np.arange(a.shape[0], dtype=np.float32)[:, None] / a.shape[0]
+    a = a * np.clip((0.97 - yy) / 0.3, 0, 1)                  # the falls fade into the clouds below
+    info["waterfall"] = save_rgba(rgb, a, os.path.join(out, "waterfall.webp"), 1.5)
+    rgb = crop("ref", (840, 38, 1002, 248))
+    a = np.clip((get_mask_birefnet(rgb, bir) - 0.25) / 0.5, 0, 1)
+    yt = np.arange(a.shape[0], dtype=np.float32)[:, None] / a.shape[0]
+    a = a * np.clip((0.96 - yt) / 0.12, 0, 1)                 # its base fades out
+    info["tower"] = save_rgba(rgb, a, os.path.join(out, "tower.webp"), 2)
 
     with open(os.path.join(out, "extras.json"), "w") as f:
         json.dump(info, f, indent=1)
