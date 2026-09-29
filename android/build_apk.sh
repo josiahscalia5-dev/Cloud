@@ -43,7 +43,7 @@ if [ ! -f "$KS" ]; then
   keytool -genkeypair -keystore "$KS" -storepass rcpreview -keypass rcpreview -alias preview \
     -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Rainbow Cascades Preview" >/dev/null 2>&1
 fi
-"$BT/apksigner" sign --ks "$KS" --ks-pass pass:rcpreview --key-pass pass:rcpreview --ks-key-alias preview \
+"$BT/apksigner" sign --v4-signing-enabled false --ks "$KS" --ks-pass pass:rcpreview --key-pass pass:rcpreview --ks-key-alias preview \
   --out "$OUT" "$B/aligned.apk"
 "$BT/apksigner" verify "$OUT"
 echo "built $OUT ($(du -h "$OUT" | cut -f1))"
