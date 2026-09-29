@@ -3,53 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0c4ecd">
+<meta name="theme-color" content="#2f67dc">
 <title>Rainbow Cascades - Level 1</title>
-<link rel="preload" href="assets/level1/bg_level1.webp" as="image">
 <link rel="stylesheet" href="css/level1.css">
 </head>
 <body>
 <div id="screen" aria-label="Level 1: Rainbow Cascades">
-  <div id="bgWide" aria-hidden="true"></div>
-  <img id="bg" src="assets/level1/bg_level1.webp" alt="" draggable="false">
+  <!-- the 3D world: floating islands, the course, the boy (js/level1.bundle.js) -->
+  <canvas id="gl"></canvas>
+  <div id="fxLayer" aria-hidden="true"></div>
 
-  <!-- 3D play field: jelly blocks, pickups, the boy and the Rainbow Gate (built by js/level1.js) -->
-  <div id="scene"><div id="world"></div></div>
-  <img id="fgBush" class="el" src="assets/level1/fg_bush.webp" alt="" draggable="false">
-  <div id="shade" aria-hidden="true"></div>
-  <div id="fx" aria-hidden="true"><svg id="bolts"></svg></div>
+  <div id="hud">
+    <button id="btnPause" class="btn" aria-label="Pause"><img src="assets/level1/hud_pause.webp" alt="" draggable="false"></button>
+    <div id="pillTime" class="pill"><span id="time" role="timer">00:00</span></div>
+    <div id="pillCoins" class="pill"><img src="assets/level1/hud_coin.webp" alt="Coins" draggable="false"><span id="coins">0</span></div>
+    <div id="hearts" class="pill" aria-label="Hearts"><i></i><i></i><i></i></div>
+    <div id="pillGems" class="pill small"><img src="assets/level1/hud_gem.webp" alt="Gems" draggable="false"><span id="gems">0</span></div>
+    <div id="pillTokens" class="pill small"><img src="assets/level1/ring.webp" alt="Tokens" draggable="false"><span id="tokens">0</span></div>
 
-  <!-- Top bar (live values) -->
-  <div id="lvlBand" class="el" aria-hidden="true"></div>
-  <img id="avatar" class="el" src="assets/level1/hud_avatar.webp" alt="" draggable="false">
-  <div id="lvlText" class="el">Lvl <span id="lvl">16</span></div>
-  <div id="xp" class="el" role="progressbar" aria-label="Experience"><div id="xpFill"></div><div id="xpGloss"></div></div>
-  <div id="pillTime" class="el pill"><span id="time" class="num" role="timer">00:00</span></div>
-  <div id="pillCoins" class="el pill"><span id="coins" class="num">0</span></div>
-  <div id="pillGems" class="el pill"><span id="gems" class="num">0</span></div>
-  <img id="iconTime" class="el" src="assets/level1/hud_stopwatch.webp" alt="Time" draggable="false">
-  <img id="iconCoin" class="el" src="assets/level1/hud_coin.webp" alt="Coins" draggable="false">
-  <img id="iconGem" class="el" src="assets/level1/hud_gem.webp" alt="Gems" draggable="false">
-  <button id="btnPause" class="el btn" aria-label="Pause"><img src="assets/level1/hud_pause.webp" alt="" draggable="false"></button>
+    <div id="seq" class="panel">
+      <div id="seqTitle">Follow the Color Sequence!</div>
+      <div id="seqRow"><div id="seqOrbs"></div><div id="seqCount">0/7</div></div>
+    </div>
 
-  <div id="hearts" class="el pill" role="img" aria-label="3 hearts left"><i></i><i></i><i></i></div>
+    <div id="sectionCard" aria-hidden="true"><div id="sectionNum"></div><div id="sectionTitle"></div></div>
 
-  <!-- Stage panel: the colour sequence in stage 1, the stage's progress after that -->
-  <div id="seq" class="el panel">
-    <div id="seqTitle">Follow the Color Sequence!</div>
-    <div id="seqOrbs"></div>
-    <div id="pips" hidden></div>
-    <div id="seqCount"><span id="step">1</span>/<span id="steps">7</span></div>
+    <div id="banner" class="panel" role="status" aria-live="polite">
+      <img id="bannerIcon" alt="" hidden draggable="false">
+      <div id="bannerText"><div id="bannerL1"></div><div id="bannerL2"></div></div>
+      <img id="bannerIcon2" alt="" hidden draggable="false">
+    </div>
+    <div id="toast" role="status" aria-live="polite"></div>
   </div>
-  <div id="journey" class="el" aria-hidden="true"><div id="journeyFill"></div><div id="journeyDot"></div><img id="journeyGate" src="assets/level1/gate.webp" alt=""></div>
-
-  <div id="banner" class="el panel" role="status" aria-live="polite">
-    <img id="bannerIcon" src="" alt="" hidden><img id="bannerIcon2" src="" alt="" hidden>
-    <span id="bannerText">Jump on the matching colors in order!</span>
-  </div>
-  <div id="stagePop" aria-hidden="true"><img id="stagePopIcon" src="" alt="" hidden><div id="stagePopTitle"></div><div id="stagePopTip"></div></div>
-
-  <div id="flash" aria-hidden="true"></div>
 
   <!-- Pause -->
   <div id="pause" class="overlay" hidden>
@@ -62,16 +47,16 @@
   </div>
 
   <!-- Out of hearts -->
-  <div id="nohearts" class="overlay" hidden>
+  <div id="over" class="overlay" hidden>
     <div class="menu panel">
       <div class="menuTitle">Out of hearts!</div>
-      <div class="menuText">Try again from the start of this stage.</div>
+      <div class="menuText">Try this section again from its island.</div>
       <button class="mbtn" data-cmd="retry">Try again</button>
       <button class="mbtn alt" data-cmd="home">Home</button>
     </div>
   </div>
 
-  <!-- Level complete -->
+  <!-- Level complete (the card from the reference sheet, with live rewards) -->
   <div id="done" class="overlay" hidden>
     <div id="card">
       <img id="cardBg" src="assets/level1/complete_card.webp" alt="" draggable="false">
@@ -79,17 +64,18 @@
       <img class="star" id="star2" src="assets/level1/star_2.webp" alt="" draggable="false">
       <img class="star" id="star3" src="assets/level1/star_3.webp" alt="" draggable="false">
       <div id="rows"></div>
-      <button id="btnNext" class="btn" aria-label="Next Level"><img src="assets/level1/btn_next.webp" alt="" draggable="false"></button>
+      <button id="btnNext" class="btn" data-cmd="next" aria-label="Next Level"><img src="assets/level1/btn_next.webp" alt="" draggable="false"></button>
     </div>
+    <div id="doneTime"></div>
     <div id="doneLinks">
       <button class="mbtn small" data-cmd="restart">Play again</button>
       <button class="mbtn small alt" data-cmd="home">Home</button>
     </div>
   </div>
 
-  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="loading"><div class="spin"></div><div>Loading Level 1…</div></div>
 </div>
 <script src="js/profile.js"></script>
-<script src="js/level1.js"></script>
+<script src="js/level1.bundle.js"></script>
 </body>
 </html>
