@@ -12,34 +12,49 @@ levels or worlds yet; the other home buttons show a "not built yet" note.
 "install unknown apps" when asked). It opens on the home screen.
 
 **Level 1** is one continuous course through the floating rainbow world, from the first red block
-to the Rainbow Gate, built from `art-source/level1_direction.png` and panels 2-10 of the reference
-sheet. Tap the block to jump to. Seven stages, shown as "1/7" to "7/7" in the top panel:
+to the Rainbow Gate, built from `art-source/level1_direction.png` and the eight gameplay panels of
+the reference sheet, in the same order. Tap the block to jump to. The top panel counts the
+sections, "1/8" to "8/8":
 
 1. **Follow the Color Sequence**: each row has two blocks; hop onto the next colour (red, yellow,
    blue, green, purple, pink). Each colour also has its own symbol (flower, circle, triangle, club,
    star, heart), so the colours can be told apart without relying on hue.
 2. **Platforms Rotate**: blocks flip over; jump while they are flat. Golden rings give tokens.
-   A shimmering rainbow block off to the left starts the **secret rainbow route**, a run of rainbow
-   tiles with rings and gems that rejoins the path.
-3. **Moving Platforms**: blocks slide from side to side; jump as they slow down.
+   The rainbow tower stands beside this stretch.
+3. **Dodge the Cloud**: the cloud monster swoops in over the boy's head and chases him down the
+   rainbow road. It follows his lane, closes in whenever he stands still (it glows red and the
+   banner warns "It's catching up!") and strikes his block when it reaches him; it also flashes
+   and strikes the blocks ahead.
 4. **Watch for Fake Platforms**: a dark purple zone under a laser orb; the cracked, flickering block
    of each pair crumbles.
-5. **Dodge the Cloud**: the cloud monster follows you down the rainbow road and strikes a flashing
-   block (and the one you stand on if you wait too long).
-6. **Choose Your Path**: the blue route is safe; the gold route has more coins and gems, a sliding
+5. **Take the Secret Rainbow Route**: the path goes on, and a shimmering rainbow road branches off
+   to the left. Jump onto it and it carries you along a curve of rings and gems and back onto the
+   path; the Level Complete card then shows "Secret Discovery +1".
+6. **Moving Platforms**: nine blocks that slide from side to side, lift up and down, or flip;
+   jump when a block comes to you.
+7. **Choose Your Path**: the blue route is safe; the gold route has more coins and gems, a sliding
    block and a fake one.
-7. **Reach the Rainbow Gate**: the rainbow road, then tap to leap into the gate.
+8. **Reach the Rainbow Gate**: the rainbow road, then tap to leap into the gate.
 
-Falling, crumbling or being struck costs one of three hearts; with none left the stage starts
-over. A wrong colour in stage 1 bounces you back. If you wait, the right block glows and gets an
-arrow. The bar under the top panel shows how far the gate is. The Level Complete card is the one
-from the reference sheet with live rewards: coins, gems, tokens (rings), the perfect bonus (no
-hearts lost, no wrong colours) and the secret discovery. Stars: 3 with no faults, 2 with up to
-two, 1 otherwise. The wallet is saved on the phone and shared with the home screen.
+The boy is seen from behind and always faces down the path (his picture comes from the Rainbow
+Gate panel). He is split at the waist so his legs swap for each stride as he runs on the spot or
+lands, tuck in when he jumps, and he leans into sideways hops instead of turning.
+
+Falling, crumbling or being struck costs one of three hearts; with none left the section starts
+over. A wrong colour in section 1 bounces you back. If you wait, the right block glows and gets an
+arrow. The bar under the top panel shows how far the gate is. Floating castle islands, rainbow
+waterfalls and crystals drift past on both sides. The Level Complete card is the one from the
+reference sheet with live rewards: coins, gems, tokens (rings), the perfect bonus (no hearts lost,
+no wrong colours) and the secret discovery. Stars: 3 with no faults, 2 with up to two, 1
+otherwise. The wallet is saved on the phone and shared with the home screen.
+
+`node game/scripts/level1_preview.mjs <out_dir>` checks that the level can be played through all
+eight sections in order on both routes (secret route + gold path, main path + safe route) and that
+running out of hearts restarts the section, and saves a screenshot of every section.
 
 Files:
 
-- `preview/compare_level1_stages_vs_reference.png`: each panel of your reference sheet above the
+- `preview/compare_level1_stages_vs_reference.png`: each gameplay panel of your reference above the
   same moment in the game, in the order the level plays
 - `preview/compare_level1_vs_direction.png`: your Level 1 image next to the opening of the level
 - `preview/level1_screen_1080x2400.png`: the level at the start, on a 1080x2400 phone
@@ -94,8 +109,9 @@ Level 1 follows the same approach with `art-source/level1_direction.png`:
    stages add dark stone blocks (with a cracked twin), gold and ice path blocks and rainbow road.
 4. The Level Complete card, its stars and the Next Level button come from the reference sheet
    (panel 10), with the reward rows rebuilt as live text.
-5. The cloud monster, laser orb, golden ring, floating islands, stage icons and the running boy
-   of the secret route are cut from panels 3-9 of the reference sheet.
+5. The boy seen from behind (split at the waist for his stride), the cloud monster, laser orb,
+   golden ring, floating islands, rainbow waterfall, rainbow tower and the section icons are cut
+   from the reference sheet and the direction image.
 
 `tools/art/pipeline_level1.py <work_dir>` reruns the Level 1 steps and writes `game/public/assets/level1/`.
 `tools/art/build_app_icon.py` makes the launcher icon from the avatar.
