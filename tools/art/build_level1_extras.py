@@ -6,7 +6,7 @@
 - floating islands that drift past along the path
 - the round banner icons of each stage (rotate, warning, red X, up arrow, left / right arrows)
 - the boy seen from behind, split at the waist (torso over legs) for his running animation
-- scenery: a rainbow waterfall and the rainbow tower
+- scenery: a cloud puff, a rainbow waterfall and the rainbow tower
 
 Boxes are in reference pixels (1536 x 1024) or direction-image pixels (941 x 1672).
 """
@@ -55,6 +55,14 @@ def save_rgba(rgb, alpha, path, scale):
 def disc(shape, cx, cy, r, soft=2.0):
     yy, xx = np.mgrid[0:shape[0], 0:shape[1]].astype(np.float32)
     return np.clip((r - np.hypot(xx - cx, yy - cy)) / soft + 0.5, 0, 1)
+
+
+def feather(a, k=0.14):
+    """Fade an alpha matte out towards the edges of its crop, so no straight cut shows."""
+    h, w = a.shape
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    edge = np.minimum(np.minimum(xx, w - 1 - xx) / w, np.minimum(yy, h - 1 - yy) / h)
+    return a * np.clip(edge / k, 0, 1)
 
 
 def largest(mask):
@@ -129,6 +137,14 @@ def main(ref_path, dir_path, models, out):
     hips = np.where(a[belt + 10 - y0] > 0.5)[0]
     info["boy_rig"] = {"size": [int(x1 - x0), int(y1 - y0)], "hip_x": round(float((hips.min() + hips.max()) / 2 / (x1 - x0)), 3),
                        "belt_y": round(float((belt - y0) / (y1 - y0)), 3)}
+
+    # a cloud puff (panel 4) for the clouds drifting around the path
+    from build_level1_bg import cloud_stamp
+    p4 = os.path.join(out, "_p4_x4.png")
+    Image.fromarray(ref[5 * S:562 * S, 1030 * S:1277 * S]).save(p4)
+    puff = cloud_stamp(p4, os.path.join(models, "big-lama.pt"))
+    os.remove(p4)
+    info["cloud_puff"] = save_rgba(puff[..., :3], feather(puff[..., 3].astype(np.float32) / 255), os.path.join(out, "cloud_puff.webp"), 3)
 
     # scenery: a rainbow waterfall (direction image) and the rainbow tower (panel 3)
     rgb = crop("dir", (0, 555, 300, 880))

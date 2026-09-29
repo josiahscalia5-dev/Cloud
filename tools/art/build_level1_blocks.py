@@ -10,8 +10,9 @@ Each colour has its own symbol so the colours can be told apart without relying 
 The later stages add dark stone blocks (with a cracked fake twin), gold and ice path blocks
 with an arrow, and rainbow road tiles; flipping blocks also get a bottom face.
 
-Texture scale is 640 px per world unit; a block is 0.8 wide, 0.62 deep and 0.26 tall, and the
-front/side textures carry another 0.21 of glow below the block (see js/level1.js).
+Texture scale is 640 px per world unit. Blocks are 0.8 wide and 0.62 deep; the colour and stone
+blocks are chunky cubes 0.44 tall, the road and path pieces (rainbow, gold, ice) slabs 0.26 tall.
+The front/side textures carry another 0.21 of glow below the block (see js/level1.js).
 """
 import os
 import sys
@@ -22,9 +23,11 @@ from PIL import Image, ImageDraw
 
 PX = 640
 TW, TH = 512, 397          # top: 0.8 x 0.62
-FW, FH = 512, 300          # front: 0.8 x (0.26 face + 0.21 glow)
+FW = 512                   # front: 0.8 wide; height = block + 0.21 of glow
 SW = 397                   # side: 0.62 deep
-FACE = 166                 # rows of the front/side texture that are the block itself
+CUBE, SLAB = 282, 166      # rows of the front/side texture that are the block itself (0.44 / 0.26)
+GLOW = 134                 # rows of light drips below it (0.21)
+SLABS = {"rainbow", "gold", "goldfake", "ice"}
 
 # (top colour, front colour) sampled from the direction image; pink follows the HUD's pink orb
 COLOURS = {
@@ -175,9 +178,10 @@ def top_texture(name, top, seed, sym=None, rim_c=(255, 255, 255), sym_c=(255, 25
     return np.dstack([np.clip(img, 0, 255), a * 255]).astype(np.uint8)
 
 
-def front_texture(front, w, seed, dark=1.0, stripes=False):
+def front_texture(front, w, seed, dark=1.0, stripes=False, face=CUBE):
     front = np.array(front, np.float32) * dark
-    h = FH
+    FACE = face
+    h = FACE + GLOW
     d = rrect_sdf(w, h, 1, -30, w - 1, FACE, 26)                           # square top (the box edge), round bottom
     y = np.mgrid[0:h, 0:w][0].astype(np.float32)
     t = np.clip(y / FACE, 0, 1)
@@ -245,12 +249,13 @@ def main(out):
         save(front_texture(front, SW, i + 20, 0.78), out, f"side_{name}")
         save(bottom_texture(front), out, f"bottom_{name}")
     for i, (name, (top, front, sym, rim, sym_c, cracks)) in enumerate(STYLES.items()):
+        face = SLAB if name in SLABS else CUBE
         save(top_texture(name, top, 10 + i, sym, rim, sym_c, cracks), out, f"top_{name}")
-        save(front_texture(front, FW, 10 + i), out, f"front_{name}")
-        save(front_texture(front, SW, 30 + i, 0.78), out, f"side_{name}")
+        save(front_texture(front, FW, 10 + i, face=face), out, f"front_{name}")
+        save(front_texture(front, SW, 30 + i, 0.78, face=face), out, f"side_{name}")
     save(top_texture("rainbow", (255, 255, 255), 40, stripes=True), out, "top_rainbow")
-    save(front_texture((200, 120, 255), FW, 41, stripes=True), out, "front_rainbow")
-    save(front_texture((200, 120, 255), SW, 42, 0.78, stripes=True), out, "side_rainbow")
+    save(front_texture((200, 120, 255), FW, 41, stripes=True, face=SLAB), out, "front_rainbow")
+    save(front_texture((200, 120, 255), SW, 42, 0.78, stripes=True, face=SLAB), out, "side_rainbow")
     Image.fromarray(glow_texture()).save(os.path.join(out, "top_glow.webp"), quality=90, method=6)
     print("block textures written to", out)
 
