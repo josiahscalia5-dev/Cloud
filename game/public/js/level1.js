@@ -1174,6 +1174,10 @@
       return screenOf(t);
     },
     tapFor: function (row, i) { return screenOf(steps[row].plats[i]); },
+    nextRoll: function () {
+      var r = boy.on && boy.on.next.filter(function (p) { return p.kind === "rotate"; })[0];
+      return r ? r.roll : -1;
+    },
     isFake: function (row, i) { var p = steps[row].plats[i]; return p.kind === "fake" && !p.gone; },
     wrongColor: function () {
       if (!boy.on) return null;

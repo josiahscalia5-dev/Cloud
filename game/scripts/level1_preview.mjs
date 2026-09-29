@@ -68,6 +68,12 @@ for (;;) {
     seen = s.stage;
     await page.waitForTimeout(500);
     await shot(`level1_stage${seen + 1}_${names[seen]}.png`);          // with the stage card
+    if (seen === 5) { await page.waitForTimeout(1500); await shot("level1_stage6_fork.png"); }
+  }
+  if (s.stage === 1 && s.step === 7 && !mid.has("flip")) {              // the next block mid-flip
+    mid.add("flip");
+    await until(async () => { const r = await page.evaluate(() => window.RCLevel1.nextRoll()); return r > 70 && r < 150; }, 6000).catch(() => {});
+    await shot("level1_stage2_play.png");
   }
   if (s.secret && !secretShot) { secretShot = true; await page.waitForTimeout(250); await shot("level1_secret.png"); }
   const stepIn = s.step - [0, 6, 12, 18, 24, 31, 37][s.stage];
