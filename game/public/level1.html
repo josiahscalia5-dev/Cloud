@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1f63d8">
+<title>Rainbow Cascades - Level 1</title>
+<link rel="preload" href="assets/level1/bg_level1.webp" as="image">
+<link rel="stylesheet" href="css/level1.css">
+</head>
+<body>
+<div id="screen" aria-label="Level 1: Jump on the matching colors">
+  <div id="bgWide" aria-hidden="true"></div>
+
+  <!-- The world: scenery with the jelly blocks, then the pickups and the boy -->
+  <div id="world" aria-hidden="true">
+    <img id="bg" src="assets/level1/bg_level1.webp" alt="" draggable="false">
+    <img id="gemL" class="w bob" src="assets/level1/gem_l.webp" alt="" draggable="false">
+    <img id="gemR" class="w bob" src="assets/level1/gem_r.webp" alt="" draggable="false">
+    <img id="boy" class="w" src="assets/level1/boy.webp" alt="" draggable="false">
+    <div id="sparkles"></div>
+  </div>
+
+  <!-- HUD (live values) -->
+  <img id="btnPause" class="h btn" src="assets/level1/hud_pause.webp" alt="Pause" draggable="false">
+  <div id="timer" class="h"><img src="assets/level1/hud_timer.webp" alt="" draggable="false"><span id="time" class="txt">00:28</span></div>
+  <div id="coins" class="h"><img src="assets/level1/hud_coins.webp" alt="" draggable="false"><span id="coinCount" class="txt">2,680</span></div>
+
+  <div id="seq" class="h" role="status" aria-label="Follow the color sequence">
+    <img src="assets/level1/hud_seq.webp" alt="" draggable="false">
+    <span id="seqTitle" class="txt">Follow the Color Sequence!</span>
+    <img class="orb" src="assets/level1/orb0.webp" alt="red" draggable="false">
+    <img class="orb" src="assets/level1/orb1.webp" alt="yellow" draggable="false">
+    <img class="orb" src="assets/level1/orb2.webp" alt="light green" draggable="false">
+    <img class="orb" src="assets/level1/orb3.webp" alt="green" draggable="false">
+    <img class="orb" src="assets/level1/orb4.webp" alt="blue" draggable="false">
+    <img class="orb" src="assets/level1/orb5.webp" alt="purple" draggable="false">
+    <span id="seqCount" class="txt">1/7</span>
+  </div>
+
+  <div id="tip" class="h"><img src="assets/level1/hud_tip.webp" alt="" draggable="false"><span id="tipText" class="txt">Jump on the matching colors in order!</span></div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="js/level1.js"></script>
+</body>
+</html>

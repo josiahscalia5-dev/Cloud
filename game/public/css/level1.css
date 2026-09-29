@@ -1,0 +1,134 @@
+@font-face {
+  font-family: "Fira Sans Condensed";
+  font-weight: 600;
+  font-display: block;
+  src: url("../fonts/fira-sans-condensed-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Sans Condensed";
+  font-weight: 700;
+  font-display: block;
+  src: url("../fonts/fira-sans-condensed-latin-700-normal.woff2") format("woff2");
+}
+
+:root {
+  --sky-top: #0a56d6;   /* top of the added sky; also shown if a screen is taller than the art */
+  --u: 1px;             /* one pixel of the reference panel for the world, set by js/level1.js */
+  --h: 1px;             /* one pixel of the reference panel for the HUD */
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky-top);
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+#screen {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  font-family: "Fira Sans Condensed", "Roboto Condensed", sans-serif;
+  color: #fff;
+  visibility: hidden;   /* shown once layout, art and fonts are ready */
+}
+#screen.ready { visibility: visible; }
+
+#bgWide {
+  position: absolute;
+  inset: -40px;
+  background: url("../assets/level1/bg_level1.webp") center 60% / cover no-repeat;
+  filter: blur(18px) saturate(1.1);
+  display: none;
+}
+#screen.wide #bgWide { display: block; }
+
+/* ---- world ---- */
+#world { position: absolute; left: 0; top: 0; pointer-events: none; }
+#world img { position: absolute; display: block; pointer-events: none; }
+#bg { left: 0; top: 0; }
+
+.bob { animation: bob 2.6s ease-in-out infinite alternate; }
+#gemR { animation-delay: -1.3s; animation-duration: 2.9s; }
+@keyframes bob {
+  from { transform: translateY(calc(-1.6 * var(--u))); }
+  to   { transform: translateY(calc(1.6 * var(--u))); }
+}
+
+#boy { animation: hang 1.8s ease-in-out infinite alternate; transform-origin: 50% 90%; }
+@keyframes hang {
+  from { transform: translateY(calc(-0.8 * var(--u))); }
+  to   { transform: translateY(calc(0.8 * var(--u))); }
+}
+
+#sparkles { position: absolute; inset: 0; }
+.spark {
+  position: absolute;
+  width: calc(9 * var(--u));
+  height: calc(9 * var(--u));
+  margin: calc(-4.5 * var(--u)) 0 0 calc(-4.5 * var(--u));
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 1) 0 12%, rgba(255, 255, 255, 0) 45%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0) 0 46%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0) 54% 100%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0) 0 46%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0) 54% 100%);
+  opacity: 0;
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  50% { opacity: 0.95; transform: scale(1) rotate(45deg); }
+}
+
+/* ---- HUD ---- */
+.h { position: absolute; }
+.h > img, img.h { position: absolute; display: block; pointer-events: none; }
+#timer > img, #coins > img, #seq > img:first-child, #tip > img { left: 0; top: 0; width: 100%; height: 100%; }
+img.h.btn { pointer-events: auto; cursor: pointer; }
+.btn { transition: transform 90ms ease-out, filter 90ms ease-out; transform-origin: 50% 50%; }
+.btn.pressed { transform: scale(0.92); filter: brightness(1.15); }
+
+.txt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  -webkit-text-stroke: calc(0.3 * var(--h)) #fff;   /* the reference lettering is a little heavier */
+  text-shadow: 0 calc(0.8 * var(--h)) calc(1.4 * var(--h)) rgba(0, 8, 35, 0.85);
+}
+
+.orb { position: absolute; }
+.orb.next { animation: orbPulse 1.1s ease-in-out infinite alternate; }
+@keyframes orbPulse {
+  from { transform: scale(1); filter: brightness(1); }
+  to   { transform: scale(1.07); filter: brightness(1.18); }
+}
+
+#toast {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, 12px);
+  max-width: 86%;
+  padding: calc(8 * var(--h)) calc(14 * var(--h));
+  border-radius: calc(12 * var(--h));
+  background: rgba(0, 12, 45, 0.92);
+  box-shadow: inset 0 0 0 calc(1.2 * var(--h)) rgba(90, 160, 255, 0.8), 0 calc(3 * var(--h)) calc(10 * var(--h)) rgba(0, 0, 0, 0.35);
+  font-weight: 600;
+  font-size: calc(14 * var(--h));
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+#screen.paused #world * { animation-play-state: paused; }

@@ -127,6 +127,7 @@
       });
       target.addEventListener("click", function () {
         if (navigator.vibrate) navigator.vibrate(12);
+        if (el.dataset.action === "Play") { location.href = "level1.html" + location.search; return; }
         toast("Preview only — “" + el.dataset.action + "” isn't built yet");
       });
     });
